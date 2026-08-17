@@ -74,11 +74,11 @@ const Navbar = function() {
     const isActive = function(path) { return location.pathname === path }
     if (!isAuthenticated) return null
     const buildAvatarUrl = function(avatar) {
-        if (!avatar) return null
-        if (avatar.startsWith('http')) return avatar
-        const path = avatar.startsWith('/') ? avatar : '/uploads/' + avatar
-        return (import.meta.env.VITE_API_URL || 'http://localhost:5000') + path
-    }
+    if (!avatar) return null
+    if (avatar.startsWith('http')) return avatar
+    const path = avatar.startsWith('/') ? avatar : '/uploads/' + avatar
+    return (import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000') + path
+}
     const avatarSrc = buildAvatarUrl(user?.avatar)
     const initial   = user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'
     return (
