@@ -1,0 +1,45 @@
+# ─── Environment Variables ────────────────────────────────────────────────────
+# Never commit the actual .env file — use .env.example as the template
+.env
+.env.local
+.env.development
+.env.production
+
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Uploaded Files ───────────────────────────────────────────────────────────
+# Local avatar uploads should not be tracked in git.
+# In production these will move to Cloudinary.
+uploads/*
+!uploads/.gitkeep
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor / IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ─── Coverage & Testing ───────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+```
+
+Also create an empty `.gitkeep` file inside `uploads/` so the folder itself is tracked by git (keeping the folder structure intact for new contributors) even though its contents are ignored:
+
+**File:** `SkillSwap_MERN/backend/uploads/.gitkeep`
+
+```
