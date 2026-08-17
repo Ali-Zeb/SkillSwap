@@ -1,5 +1,5 @@
 // ─── Date & Time ──────────────────────────────────────────────────────────────
-
+import { SOCKET_URL } from './config'
 /**
  * Formats a date string or Date object into a readable format.
  * e.g. "July 2, 2026"
@@ -140,12 +140,12 @@ export const getAvatarUrl = (avatar, fullName) => {
             return avatar
         }
         if (avatar.startsWith('/uploads/')) {
-            return 'http://localhost:5000' + avatar
+            return SOCKET_URL + avatar
         }
         if (!avatar.includes('/')) {
-            return 'http://localhost:5000/uploads/' + avatar
+            return SOCKET_URL + '/uploads/' + avatar
         }
-        return 'http://localhost:5000/' + avatar
+        return SOCKET_URL + '/' + avatar
     }
     const name     = fullName || 'User'
     const initials = name.split(' ').map(function(n) { return n[0] }).join('').toUpperCase().slice(0, 2)
