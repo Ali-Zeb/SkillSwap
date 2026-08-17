@@ -1,27 +1,20 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 const { LIMITS } = require('../config/constants');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
-
-// Ensure the uploads directory exists at startup so Multer never fails
-// with an obscure ENOENT error on the first request.
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
-    filename: (req, file, cb) => {
-        // Sanitize: strip the original name entirely and build a safe,
-        // collision-resistant filename instead of trusting user input.
-        const ext = path.extname(file.originalname).toLowerCase();
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        cb(null, `${req.user ? req.user.id : 'anon'}-${uniqueSuffix}${ext}`);
-    }
+// Images now go straight to Cloudinary instead of local disk. Render's
+// free-tier disk is ephemeral (wiped on every restart/redeploy), so
+// storing uploads locally meant avatars silently disappeared after any
+// redeploy. Cloudinary storage persists independently of the server.
+const storage = new CloudinaryStorage({
+    cloudinary,
+    params: (req, file) => ({
+        folder: 'skillswap/avatars',
+        public_id: `${req.user ? req.user.id : 'anon'}-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        transformation: [{ width: 512, height: 512, crop: 'limit' }],
+    }),
 });
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -42,11 +35,6 @@ const upload = multer({
     }
 });
 
-/**
- * Wraps a Multer middleware so its errors (file too large, wrong type,
- * etc.) return a clean JSON 400 instead of crashing past Multer's own
- * error format into the generic error handler.
- */
 const handleUploadError = (uploadMiddleware) => {
     return (req, res, next) => {
         uploadMiddleware(req, res, (err) => {

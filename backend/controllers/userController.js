@@ -61,8 +61,8 @@ const updateAvatar = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const avatarPath = `/uploads/${req.file.filename}`;
-
+    const avatarPath = req.file.path;
+    
     const user = await User.findByIdAndUpdate(
         req.user.id,
         { avatar: avatarPath },
