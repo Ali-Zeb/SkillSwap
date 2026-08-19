@@ -35,6 +35,12 @@ const MessageSchema = new mongoose.Schema({
         type:    Number,
         default: null,
     },
+    // Cloudinary resource type ('image' or 'raw') — tells the frontend how
+    // the file was stored so it can decide how to link/preview it.
+    fileResourceType: {
+        type:    String,
+        default: null,
+    },
     isRead: {
         type:    Boolean,
         default: false,

@@ -27,11 +27,14 @@ const Layout = ({ children }) => {
         <ToastContext.Provider value={{ showToast }}>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--background)' }}>
 
-                {/* Sticky top navbar */}
+                {/* Fixed top navbar — see Navbar.jsx for why position:fixed
+                    rather than sticky */}
                 <Navbar />
 
-                {/* Page content */}
-                <main style={{ flex: 1 }}>
+                {/* Page content — paddingTop reserves the 64px the fixed
+                    navbar occupies, since it no longer takes up layout
+                    flow space itself */}
+                <main style={{ flex: 1, paddingTop: 64 }}>
                     {children}
                 </main>
 

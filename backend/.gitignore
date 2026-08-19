@@ -36,10 +36,3 @@ Thumbs.db
 # ─── Coverage & Testing ───────────────────────────────────────────────────────
 coverage/
 .nyc_output/
-```
-
-Also create an empty `.gitkeep` file inside `uploads/` so the folder itself is tracked by git (keeping the folder structure intact for new contributors) even though its contents are ignored:
-
-**File:** `SkillSwap_MERN/backend/uploads/.gitkeep`
-
-```

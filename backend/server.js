@@ -29,9 +29,21 @@ connectDB();
 const app    = express();
 const server = http.createServer(app);
 
+// Frontend origins allowed to call this API. Both the local dev origin and
+// the deployed production origin are allowed unconditionally (not switched
+// on NODE_ENV) so the local frontend can be pointed at the live backend
+// without a CORS error, and the deployed frontend always works no matter
+// which backend it's talking to. CLIENT_URL still works as an extra/
+// overriding origin (e.g. a staging deploy) via env var.
+const ALLOWED_ORIGINS = [...new Set([
+    'http://localhost:5173',
+    'https://skillswap-frontend-cy48.onrender.com',
+    process.env.CLIENT_URL,
+].filter(Boolean))];
+
 const io = new Server(server, {
     cors: {
-        origin:  process.env.CLIENT_URL || 'http://localhost:5173',
+        origin:  ALLOWED_ORIGINS,
         methods: ['GET', 'POST'],
         credentials: true
     }
@@ -43,7 +55,7 @@ app.set('io', io);
 
 // Core middleware
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: ALLOWED_ORIGINS,
     credentials: true
 }));
 app.use(express.json());

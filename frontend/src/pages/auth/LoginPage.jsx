@@ -59,8 +59,11 @@ const LoginPage = function() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Navbar */}
-            <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {/* Navbar — fixed so it stays visible if the form ever grows
+                taller than the viewport (see LandingPage.jsx for why fixed
+                rather than sticky: overflow-x:hidden on html/body breaks
+                sticky, fixed is immune to it) */}
+            <nav style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 40, background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 <Link to="/" style={{ fontWeight: 700, fontSize: '1.375rem', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', textDecoration: 'none' }}>
                     SkillSwap
                 </Link>
@@ -71,8 +74,9 @@ const LoginPage = function() {
                 </div>
             </nav>
 
-            {/* Card */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+            {/* Card — top padding includes an extra 64px to reserve the
+                space the now-fixed navbar above no longer occupies in flow */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'calc(2rem + 64px) 1rem 2rem' }}>
                 <div style={{ width: '100%', maxWidth: 900, background: 'white', borderRadius: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.1)', overflow: 'hidden', display: 'flex', minHeight: 520 }}>
 
                     {/* ── Left gradient panel — hidden on mobile (< 640px) ── */}

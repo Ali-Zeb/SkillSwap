@@ -6,6 +6,8 @@ import { selectCurrentUser, selectToken } from '../features/auth/authSlice'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
+import MessageAttachment from '../components/ui/MessageAttachment'
+import { useToast } from '../components/layout/Layout'
 import { getAvatarUrl, timeAgo, truncate } from '../utils/helpers'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
@@ -15,6 +17,7 @@ const MessagesPage = function() {
     const navigate     = useNavigate()
     const currentUser  = useSelector(selectCurrentUser)
     const token        = useSelector(selectToken)
+    const { showToast } = useToast()
 
     const [conversations, setConversations] = useState([])
     const [active,        setActive]        = useState(null)
@@ -24,12 +27,14 @@ const MessagesPage = function() {
     const [loadingConvos, setLoadingConvos] = useState(true)
     const [loadingMsgs,   setLoadingMsgs]   = useState(false)
     const [typing,        setTyping]        = useState({})
+    const [uploadingFile, setUploadingFile] = useState(false)
     // On mobile: which panel is visible — 'sidebar' or 'chat'
     const [mobileView,    setMobileView]    = useState('sidebar')
 
-    const socketRef = useRef(null)
-    const bottomRef = useRef(null)
-    const timerRef  = useRef(null)
+    const socketRef  = useRef(null)
+    const bottomRef  = useRef(null)
+    const timerRef   = useRef(null)
+    const fileInputRef = useRef(null)
 
     useEffect(function() {
         if (!token) return
@@ -143,6 +148,43 @@ const MessagesPage = function() {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             sendMessage()
+        }
+    }
+
+    // Uploads via the same Cloudinary-backed /messages/file endpoint used by
+    // SessionRoomPage.jsx (see backend/middleware/upload.js's uploadChatFile
+    // and controllers/messageFileController.js) — no separate upload logic
+    // here. The server broadcasts the created message over 'new-message'
+    // itself, so the recipient gets it in real time without any socket
+    // emit on our end.
+    const handleFileSelect = async function(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        e.target.value = ''
+        if (!active) return
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('File too large. Maximum size is 10 MB.', 'error')
+            return
+        }
+        setUploadingFile(true)
+        try {
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('receiverId', active._id)
+            const { data } = await api.post('/messages/file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+            // The backend broadcasts this same message over the
+            // 'new-message' socket event right after creating it (see
+            // messageFileController.js), so the socket handler above will
+            // also deliver it here — the dedup-by-_id check in that handler
+            // prevents this from appending it twice.
+            setMessages(function(prev) {
+                if (prev.some(function(m) { return m._id === data.message._id })) return prev
+                return [...prev, data.message]
+            })
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to send file.', 'error')
+        } finally {
+            setUploadingFile(false)
         }
     }
 
@@ -272,7 +314,11 @@ const MessagesPage = function() {
                                     boxShadow: mine ? '0 1px 4px rgba(37,99,235,0.2)' : '0 1px 3px rgba(0,0,0,0.06)',
                                     wordBreak: 'break-word',
                                 }}>
-                                    {msg.content}
+                                    {msg.fileUrl ? (
+                                        <MessageAttachment fileUrl={msg.fileUrl} fileName={msg.fileName} mine={mine} variant="light" />
+                                    ) : (
+                                        msg.content
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -339,6 +385,23 @@ const MessagesPage = function() {
                 {/* Input */}
                 <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid #f1f5f9', background: 'white', flexShrink: 0 }}>
                     <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-end' }}>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                            onChange={handleFileSelect}
+                            style={{ display: 'none' }}
+                            aria-label="Attach file"
+                        />
+                        <button
+                            onClick={function() { fileInputRef.current?.click() }}
+                            disabled={uploadingFile}
+                            title="Attach file"
+                            aria-label="Attach file or image"
+                            style={{ width: 40, height: 40, background: 'white', color: 'var(--gray)', border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: uploadingFile ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.05rem', transition: 'all 0.2s' }}
+                        >
+                            {uploadingFile ? <Spinner size="sm" /> : '📎'}
+                        </button>
                         <textarea
                             value={text}
                             onChange={handleInput}

@@ -5,10 +5,10 @@ import { selectCurrentUser, selectToken } from '../features/auth/authSlice'
 import { io } from 'socket.io-client'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
+import MessageAttachment from '../components/ui/MessageAttachment'
 import { getAvatarUrl } from '../utils/helpers'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
-const API_URL    = import.meta.env.VITE_API_URL    || 'http://localhost:5000'
 
 const ICE_SERVERS = {
     iceServers: [
@@ -44,6 +44,7 @@ const SessionRoomPage = function () {
     const [peerSharing,   setPeerSharing]   = useState(false)
     const [peerConnected, setPeerConnected] = useState(false)
     const [mediaError,    setMediaError]    = useState(null)
+    const [remoteAutoplayBlocked, setRemoteAutoplayBlocked] = useState(false)
     const [callStatus,    setCallStatus]    = useState('waiting')
     const [recording,     setRecording]     = useState(false)
     const [recordingTime, setRecordingTime] = useState(0)
@@ -65,6 +66,7 @@ const SessionRoomPage = function () {
     const mediaRecRef      = useRef(null)
     const fileInputRef     = useRef(null)
     const partnerUserIdRef = useRef(null)
+    const remoteStreamRef  = useRef(null)
 
     /* ── Load session + message history ─────────────────────────────────── */
     useEffect(function () {
@@ -97,6 +99,60 @@ const SessionRoomPage = function () {
         if (id) fetchSession()
     }, [id])
 
+    /* ── Re-attach local stream once the video element actually exists ──────
+       getUserMedia() (in startLocalMedia, below) can resolve before the
+       `loading` gate lifts — e.g. when the browser already has cached
+       camera permission and responds almost instantly, faster than the
+       session API call. At that point <video ref={localVideoRef}> isn't
+       in the DOM yet (still showing the loading spinner), so the
+       srcObject assignment there silently no-ops. The captured stream is
+       still fine — it's what gets sent to the peer via pc.addTrack, which
+       is why the *other* person sees us correctly — only our own local
+       preview is missing. Re-attach here once loading flips false and the
+       element is guaranteed to exist. */
+    useEffect(function () {
+        if (!loading && localVideoRef.current && localStreamRef.current) {
+            localVideoRef.current.srcObject = localStreamRef.current
+            localVideoRef.current.play()?.catch(function () {})
+        }
+    }, [loading])
+
+    /* ── Re-attach the remote stream when the main stage switches video
+       elements ──────────────────────────────────────────────────────────
+       The main stage renders a *different* <video> element depending on
+       who's presenting (see the render below): our own screen share, the
+       partner's incoming track (camera or, once they start presenting,
+       their screen — same track, no renegotiation needed, see
+       toggleScreenShare's use of replaceTrack), or their normal camera.
+       Switching between these branches unmounts one <video> DOM node and
+       mounts another, which drops the srcObject that was set imperatively
+       on the old node — nothing re-attaches it to the new one by default.
+       Re-run the same attach+play logic from pc.ontrack whenever the
+       branch changes. */
+    useEffect(function () {
+        if (remoteVideoRef.current && remoteStreamRef.current) {
+            remoteVideoRef.current.srcObject = remoteStreamRef.current
+            remoteVideoRef.current.play()?.catch(function () { setRemoteAutoplayBlocked(true) })
+        }
+    }, [sharing, peerSharing])
+
+    /* ── Re-attach the local screen-share stream once its video element
+       exists ────────────────────────────────────────────────────────────
+       Same race as the other two: toggleScreenShare() calls
+       getDisplayMedia() and assigns the resulting stream to
+       screenVideoRef.current *before* calling setSharing(true) — but the
+       <video ref={screenVideoRef}> element only renders once `sharing` is
+       already true, so at assignment time it doesn't exist yet and the
+       `if (screenVideoRef.current)` guard silently skips it. Re-attach
+       here once `sharing` flips true and the element is guaranteed to
+       exist. */
+    useEffect(function () {
+        if (sharing && screenVideoRef.current && screenStreamRef.current) {
+            screenVideoRef.current.srcObject = screenStreamRef.current
+            screenVideoRef.current.play()?.catch(function () {})
+        }
+    }, [sharing])
+
     /* ── Session timer ───────────────────────────────────────────────────── */
     useEffect(function () {
         timerRef.current = setInterval(function () {
@@ -121,7 +177,25 @@ const SessionRoomPage = function () {
             })
         }
         pc.ontrack = function (ev) {
-            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = ev.streams[0]
+            remoteStreamRef.current = ev.streams[0]
+            if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = ev.streams[0]
+                // The remote video is intentionally unmuted (we need to hear
+                // the other person), and mobile browsers commonly block
+                // autoplay of unmuted media even when the `autoplay`
+                // attribute is set — the stream attaches fine but never
+                // actually renders. An explicit play() call succeeds more
+                // often (browsers are more lenient about programmatic play()
+                // shortly after a user gesture like joining the session);
+                // if it's still blocked, surface a tap-to-play affordance
+                // instead of leaving a silently blank video.
+                const playResult = remoteVideoRef.current.play()
+                if (playResult?.catch) {
+                    playResult
+                        .then(function () { setRemoteAutoplayBlocked(false) })
+                        .catch(function () { setRemoteAutoplayBlocked(true) })
+                }
+            }
             setCallStatus('connected')
             setPeerConnected(true)
         }
@@ -152,7 +226,10 @@ const SessionRoomPage = function () {
                 audio: { echoCancellation: true, noiseSuppression: true },
             })
             localStreamRef.current = stream
-            if (localVideoRef.current) localVideoRef.current.srcObject = stream
+            if (localVideoRef.current) {
+                localVideoRef.current.srcObject = stream
+                localVideoRef.current.play()?.catch(function () {})
+            }
             setMediaError(null)
             return stream
         } catch (err) {
@@ -218,6 +295,7 @@ const SessionRoomPage = function () {
         socket.on('peer-left', function () {
             setPeerConnected(false)
             setCallStatus('waiting')
+            remoteStreamRef.current = null
             if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
         })
 
@@ -274,7 +352,10 @@ const SessionRoomPage = function () {
             try {
                 const ss = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false })
                 screenStreamRef.current = ss
-                if (screenVideoRef.current) screenVideoRef.current.srcObject = ss
+                if (screenVideoRef.current) {
+                    screenVideoRef.current.srcObject = ss
+                    screenVideoRef.current.play()?.catch(function () {})
+                }
                 setSharing(true)
                 socketRef.current?.emit('webrtc-screen-share', { sessionId: id, sharing: true })
                 const screenTrack = ss.getVideoTracks()[0]
@@ -353,13 +434,15 @@ const SessionRoomPage = function () {
             fd.append('file', file)
             fd.append('receiverId', partner._id)
             const { data } = await api.post('/messages/file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+            // The backend broadcasts this same message over the
+            // 'new-message' socket event right after creating it (see
+            // messageFileController.js), so the socket handler above will
+            // also deliver it here — the dedup-by-_id check in that handler
+            // prevents this from appending it twice.
             setMessages(function (prev) {
                 if (prev.some(function (m) { return m._id === data.message._id })) return prev
                 return [...prev, data.message]
             })
-            if (socketRef.current?.connected) {
-                socketRef.current.emit('send-message', { receiverId: partner._id, content: '📎 ' + file.name })
-            }
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to send file.')
         } finally {
@@ -380,7 +463,7 @@ const SessionRoomPage = function () {
 
     const handleLeave = useCallback(async function () {
         stopRecording()
-        try { await api.put('/sessions/' + id + '/complete') } catch {}
+        try { await api.put('/sessions/' + id + '/complete') } catch (error) { console.error('Failed to mark session complete:', error.message) }
         navigate('/sessions')
     }, [id, navigate, stopRecording])
 
@@ -397,13 +480,6 @@ const SessionRoomPage = function () {
     const formatRecTime = useMemo(function () {
         return function (secs) {
             return Math.floor(secs / 60).toString().padStart(2, '0') + ':' + (secs % 60).toString().padStart(2, '0')
-        }
-    }, [])
-
-    const isImage = useMemo(function () {
-        return function (url) {
-            if (!url) return false
-            return /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)
         }
     }, [])
 
@@ -453,20 +529,7 @@ const SessionRoomPage = function () {
                     <div className={'sr-msg-bubble ' + (isMine ? 'sr-msg-bubble--mine' : 'sr-msg-bubble--theirs')}>
                         {!isMine && <span className="sr-msg-sender">{partner?.fullName?.split(' ')[0]}</span>}
                         {hasFile ? (
-                            isImage(msg.fileUrl) ? (
-                                <a href={API_URL + msg.fileUrl} target="_blank" rel="noreferrer" className="sr-msg-img-link">
-                                    <img src={API_URL + msg.fileUrl} alt={msg.fileName || 'Image'} className="sr-msg-img" />
-                                </a>
-                            ) : (
-                                <a href={API_URL + msg.fileUrl} download={msg.fileName} target="_blank" rel="noreferrer"
-                                    className={'sr-msg-file ' + (isMine ? 'sr-msg-file--mine' : 'sr-msg-file--theirs')}>
-                                    <span className="sr-msg-file-icon">📄</span>
-                                    <div>
-                                        <p className="sr-msg-file-name">{msg.fileName || 'File'}</p>
-                                        <p className="sr-msg-file-hint">Tap to download</p>
-                                    </div>
-                                </a>
-                            )
+                            <MessageAttachment fileUrl={msg.fileUrl} fileName={msg.fileName} mine={isMine} variant="dark" />
                         ) : (
                             <p className="sr-msg-text">{msg.content}</p>
                         )}
@@ -620,7 +683,10 @@ const SessionRoomPage = function () {
                     <div className="sr-stage" role="region" aria-label="Video area">
 
                         {/* Main video */}
-                        {(sharing || peerSharing) ? (
+                        {sharing ? (
+                            /* I'm presenting: my own screen capture, sourced
+                               locally — never touches the peer connection's
+                               incoming track. */
                             <div className="sr-stage-main">
                                 <video
                                     ref={screenVideoRef}
@@ -632,8 +698,42 @@ const SessionRoomPage = function () {
                                 />
                                 <div className="sr-presenting-badge">
                                     <span className="sr-presenting-dot" />
-                                    {sharing ? 'You are presenting' : (partner?.fullName?.split(' ')[0] + ' is presenting')}
+                                    You are presenting
                                 </div>
+                            </div>
+                        ) : peerSharing ? (
+                            /* Partner is presenting: toggleScreenShare()
+                               replaces their one outgoing video track in
+                               place (camera <-> screen) rather than adding a
+                               second track, so their screen already arrives
+                               on the same transceiver ontrack bound
+                               remoteVideoRef to — no separate stream
+                               handling needed, just reusing it here. */
+                            <div className="sr-stage-main">
+                                <video
+                                    ref={remoteVideoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="sr-video sr-video--contain"
+                                    aria-label={(partner?.fullName || 'Partner') + ' is sharing their screen'}
+                                />
+                                <div className="sr-presenting-badge">
+                                    <span className="sr-presenting-dot" />
+                                    {partner?.fullName?.split(' ')[0] + ' is presenting'}
+                                </div>
+                                {remoteAutoplayBlocked && (
+                                    <button
+                                        onClick={function () {
+                                            remoteVideoRef.current?.play()
+                                                .then(function () { setRemoteAutoplayBlocked(false) })
+                                                .catch(function (err) { console.error('play() retry failed:', err) })
+                                        }}
+                                        className="sr-tap-to-play"
+                                        aria-label="Tap to play screen share"
+                                    >
+                                        ▶ Tap to play
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="sr-stage-main">
@@ -665,12 +765,39 @@ const SessionRoomPage = function () {
                                 <div className="sr-peer-name-badge">
                                     {partner?.fullName?.split(' ')[0]}
                                 </div>
+                                {/* Some mobile browsers block autoplay of unmuted
+                                    video even after an explicit play() call — a
+                                    direct tap satisfies any browser's autoplay
+                                    policy, so offer that instead of a silently
+                                    blank video. */}
+                                {remoteAutoplayBlocked && peerConnected && !peerVideoOff && (
+                                    <button
+                                        onClick={function () {
+                                            remoteVideoRef.current?.play()
+                                                .then(function () { setRemoteAutoplayBlocked(false) })
+                                                .catch(function (err) { console.error('play() retry failed:', err) })
+                                        }}
+                                        className="sr-tap-to-play"
+                                        aria-label="Tap to play video"
+                                    >
+                                        ▶ Tap to play video
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        {/* PIP — local camera */}
+                        {/* PIP — local camera (+ partner camera, but only
+                            while I'm presenting and they're not — once they
+                            start presenting there's no separate camera track
+                            to preview here, since screen share replaces
+                            their one video track rather than adding a
+                            second; their content is shown full-size above
+                            instead). Only one of the three branches above
+                            ever mounts a <video ref={remoteVideoRef}> at a
+                            time, so reusing the same ref here never
+                            collides with it. */}
                         <div className="sr-pip-stack">
-                            {(sharing || peerSharing) && (
+                            {sharing && !peerSharing && (
                                 <div className="sr-pip" aria-label="Partner camera (PIP)">
                                     <video
                                         ref={remoteVideoRef}
@@ -756,7 +883,7 @@ const SessionRoomPage = function () {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
                                 className="sr-file-input-hidden"
                                 onChange={handleFileSelect}
                                 aria-label="Attach file"
@@ -792,7 +919,7 @@ const SessionRoomPage = function () {
                             </button>
                         </div>
                         <p className="sr-chat-hint">
-                            Images · PDF · Word · Excel · PPT · ZIP · Max 10 MB
+                            Images · PDF · Word · Excel · PPT · TXT · Max 10 MB
                         </p>
                     </div>
                     {/* Notes — desktop only, inside sidebar below chat */}
@@ -834,6 +961,15 @@ const SessionRoomPage = function () {
                         </div>
                         <div className="sr-chat-footer sr-chat-footer--mobile">
                             <div className="sr-chat-input-row">
+                                <button
+                                    onClick={function () { fileInputRef.current?.click() }}
+                                    disabled={uploadingFile}
+                                    className="sr-icon-btn"
+                                    aria-label="Attach file or image"
+                                    title="Attach file"
+                                >
+                                    {uploadingFile ? <Spinner size="sm" /> : '📎'}
+                                </button>
                                 <input
                                     type="text"
                                     value={newMessage}

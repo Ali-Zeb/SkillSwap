@@ -354,6 +354,16 @@
   .navbar-avatar-caret { display: none !important; }
 }
 
+/* -- LandingPage "Why Choose SkillSwap?" -- 3 columns on desktop (was
+   auto-fit, which produced an awkward 4-then-2 split for 6 cards),
+   stepping down to 2 then 1 column on smaller screens -- */
+@media (max-width: 1023px) {
+  .landing-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 639px) {
+  .landing-features-grid { grid-template-columns: 1fr !important; }
+}
+
 /* -- M3: EditProfile -- mobile drawer max-height -- */
 .mobile-nav-drawer { max-height: calc(100vh - 64px); overflow-y: auto; }
 
@@ -978,6 +988,29 @@ input, textarea, select {
   border-radius: 6px;
   border: 1px solid var(--sr-border);
 }
+
+/* -- Tap-to-play fallback (mobile autoplay-blocked video) ----------------- */
+.sr-tap-to-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--sr-accent);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: var(--sr-transition);
+}
+.sr-tap-to-play:hover { background: var(--sr-accent-dark); }
+.sr-tap-to-play:active { transform: translate(-50%, -50%) scale(0.96); }
 .sr-peer-muted-badge {
   position: absolute;
   bottom: 16px;

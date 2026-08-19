@@ -91,6 +91,21 @@
 
 ---
 
+## Environment Configuration
+
+`frontend/.env` is gitignored and used for **local development only** — it should always point at `http://localhost:5000`, matching `frontend/.env.example`. This is expected to differ from the live site: Vite bakes `VITE_API_URL`/`VITE_SOCKET_URL` into the built JS at **build time**, not read at runtime, so a committed `.env` wouldn't do anything useful for the deployed app anyway — Render rebuilds the frontend from source on every deploy.
+
+**Production** values are set directly in Render's dashboard, under the frontend static site's **Environment** settings — not in any file in this repo:
+
+| Variable | Local (`frontend/.env`) | Production (Render dashboard) |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:5000/api` | `https://skillswap-ou18.onrender.com/api` |
+| `VITE_SOCKET_URL` | `http://localhost:5000` | `https://skillswap-ou18.onrender.com` |
+
+The backend's CORS config (`backend/server.js`) allows both the local (`http://localhost:5173`) and production (`https://skillswap-frontend-cy48.onrender.com`) frontend origins at all times — so pointing a local frontend dev server at the live backend (or vice versa) never hits a CORS error.
+
+---
+
 ## Project Structure
 
 ```

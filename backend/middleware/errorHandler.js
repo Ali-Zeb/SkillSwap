@@ -7,46 +7,56 @@
  * to handle every error type itself.
  */
 const errorHandler = (err, req, res, next) => {
-    let error = { ...err };
-    error.message = err.message;
-
+    // Full error (including stack and any filesystem/driver detail) is
+    // logged here only — never sent in the response body. Node/Mongoose
+    // internals (e.g. ENOENT from a missing file) don't set `.statusCode`,
+    // so anything not explicitly recognized below falls through to the
+    // generic 500 message instead of leaking raw error.message to the client.
     console.error('Error:', err);
+
+    let statusCode = 500;
+    let message = 'Server error';
 
     // Mongoose bad ObjectId (e.g. /api/users/not-a-valid-id)
     if (err.name === 'CastError') {
-        error.message = 'Resource not found';
-        error.statusCode = 404;
+        statusCode = 404;
+        message = 'Resource not found';
     }
 
     // Mongoose duplicate key (e.g. unique email already exists)
-    if (err.code === 11000) {
+    else if (err.code === 11000) {
         const field = Object.keys(err.keyValue || {})[0] || 'field';
-        error.message = `Duplicate value for ${field}. Please use another value`;
-        error.statusCode = 400;
+        statusCode = 400;
+        message = `Duplicate value for ${field}. Please use another value`;
     }
 
     // Mongoose schema validation errors
-    if (err.name === 'ValidationError') {
-        error.message = Object.values(err.errors).map((val) => val.message).join(', ');
-        error.statusCode = 400;
+    else if (err.name === 'ValidationError') {
+        statusCode = 400;
+        message = Object.values(err.errors).map((val) => val.message).join(', ');
     }
 
     // JWT errors (in case they bubble up here instead of being caught in auth.js)
-    if (err.name === 'JsonWebTokenError') {
-        error.message = 'Invalid token';
-        error.statusCode = 401;
+    else if (err.name === 'JsonWebTokenError') {
+        statusCode = 401;
+        message = 'Invalid token';
     }
 
-    if (err.name === 'TokenExpiredError') {
-        error.message = 'Token expired';
-        error.statusCode = 401;
+    else if (err.name === 'TokenExpiredError') {
+        statusCode = 401;
+        message = 'Token expired';
     }
 
-    res.status(error.statusCode || 500).json({
-        success: false,
-        message: error.message || 'Server error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
+    // Deliberately thrown by our own code (e.g. the notFound middleware
+    // below) with an already-safe, user-facing message. Node/Mongoose/driver
+    // errors never set `.statusCode`, so this branch can't be reached by
+    // unexpected internal errors.
+    else if (err.statusCode) {
+        statusCode = err.statusCode;
+        message = err.message;
+    }
+
+    res.status(statusCode).json({ success: false, message });
 };
 
 /**

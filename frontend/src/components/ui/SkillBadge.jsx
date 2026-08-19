@@ -1,5 +1,3 @@
-import { getCategoryColor } from '../../utils/helpers'
-
 const PROFICIENCY_COLORS = {
     beginner:     'text-blue-400 bg-blue-500/10',
     intermediate: 'text-yellow-400 bg-yellow-500/10',
@@ -15,7 +13,6 @@ const SkillBadge = ({
     onRemove,
 }) => {
     const skillName = skill?.skillId?.name || skill?.name || ''
-    const category  = skill?.skillId?.category || skill?.category || ''
     const proficiency = skill?.proficiency || 'intermediate'
 
     return (

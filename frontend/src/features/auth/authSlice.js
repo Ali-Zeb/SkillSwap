@@ -40,7 +40,7 @@ export const loginUser = createAsyncThunk(
 export const logoutUser = createAsyncThunk(
     'auth/logout',
     async () => {
-        try { await api.post('/auth/logout') } catch {}
+        try { await api.post('/auth/logout') } catch (error) { console.error('Logout request failed:', error.message) }
     }
 )
 

@@ -34,7 +34,7 @@ router.put(
 router.put(
     '/avatar',
     protect,
-    handleUploadError(upload.single('avatar')),
+    handleUploadError(upload.single('avatar'), LIMITS.AVATAR_FILE_SIZE_MB),
     updateAvatar
 );
 

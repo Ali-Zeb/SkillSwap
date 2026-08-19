@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
+const { uploadChatFile, handleUploadError } = require('../middleware/upload');
 const { LIMITS } = require('../config/constants');
 
 const { getConversation, sendMessage, getConversationsList } = require('../controllers/messageController');
+const { sendFileMessage } = require('../controllers/messageFileController');
 
 router.get('/', protect, getConversationsList);
 
@@ -20,18 +22,11 @@ router.post(
 
 router.get('/:userId', protect, getConversation);
 
+router.post(
+    '/file',
+    protect,
+    handleUploadError(uploadChatFile.single('file'), LIMITS.CHAT_FILE_SIZE_MB),
+    sendFileMessage
+);
+
 module.exports = router;
-
-const multer              = require('multer');
-const path                = require('path');
-const { sendFileMessage } = require('../controllers/messageFileController');
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-    filename:    (req, file, cb) => {
-        cb(null, 'chat-' + Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname))
-    }
-});
-const uploadFile = multer({ storage, limits: { fileSize: 10*1024*1024 } });
-
-router.post('/file', protect, uploadFile.single('file'), sendFileMessage);

@@ -32,8 +32,10 @@ const LandingPage = function () {
     return (
         <div style={{ minHeight: '100vh', background: 'white', color: '#1e293b', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-            {/* Navbar */}
-            <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'white', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {/* Navbar — fixed rather than sticky, same reason as the app's
+                Navbar.jsx: overflow-x:hidden on html/body (see index.css)
+                silently breaks position:sticky, but fixed is immune to it */}
+            <nav style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 40, background: 'white', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
                     <span style={{ fontWeight: 700, fontSize: '1.375rem', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                         SkillSwap
@@ -68,8 +70,9 @@ const LandingPage = function () {
                 </div>
             </nav>
 
-            {/* Hero */}
-            <section id="home" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%)', padding: '5rem 1.5rem 6rem', position: 'relative', overflow: 'hidden' }}>
+            {/* Hero — top padding includes an extra 64px to reserve the
+                space the now-fixed navbar above no longer occupies in flow */}
+            <section id="home" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%)', padding: 'calc(5rem + 64px) 1.5rem 6rem', position: 'relative', overflow: 'hidden', scrollMarginTop: 64 }}>
                 <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: 500, height: 500, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: '-20%', left: '-5%', width: 400, height: 400, background: 'rgba(124,58,237,0.2)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
                 <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '4rem', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
@@ -130,7 +133,7 @@ const LandingPage = function () {
             </section>
 
             {/* Features */}
-            <section id="features" style={{ padding: '5rem 1.5rem', background: '#f9fafb' }}>
+            <section id="features" style={{ padding: '5rem 1.5rem', background: '#f9fafb', scrollMarginTop: 64 }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
                         <h2 style={{ fontSize: 'clamp(1.625rem, 3vw, 2.25rem)', fontWeight: 700, color: '#1e293b', marginBottom: '0.75rem' }}>
@@ -140,7 +143,7 @@ const LandingPage = function () {
                             Intelligent features designed for effective peer learning
                         </p>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    <div className="landing-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
                         {FEATURES.map(function (feature) {
                             return (
                                 <div key={feature.title} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 16, padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -161,7 +164,7 @@ const LandingPage = function () {
             </section>
 
             {/* How It Works */}
-            <section id="how-it-works" style={{ padding: '5rem 1.5rem', background: 'white' }}>
+            <section id="how-it-works" style={{ padding: '5rem 1.5rem', background: 'white', scrollMarginTop: 64 }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
                         <h2 style={{ fontSize: 'clamp(1.625rem, 3vw, 2.25rem)', fontWeight: 700, color: '#1e293b', marginBottom: '0.75rem' }}>

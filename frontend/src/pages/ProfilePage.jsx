@@ -74,7 +74,9 @@ const ProfilePage = () => {
                 message: 'Hi ' + profileUser?.fullName + ', I would love to exchange skills with you!'
             })
             setRequestSent(true)
-        } catch { } finally {
+        } catch (error) {
+            console.error('Failed to send connect request:', error.message)
+        } finally {
             setSending(false)
         }
     }
