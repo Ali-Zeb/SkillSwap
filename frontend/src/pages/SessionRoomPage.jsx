@@ -10,11 +10,27 @@ import { getAvatarUrl } from '../utils/helpers'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 
+// STUN alone can't traverse a symmetric NAT or CGNAT (common on mobile
+// data and many home ISPs) — two peers on different networks/cities can
+// fail to find a direct path even though signaling (who's in the room)
+// works fine, since that's relayed through our own server and unaffected
+// by NAT. A TURN server relays the actual audio/video/screen traffic when
+// a direct peer-to-peer connection can't be established. Open Relay
+// Project (metered.ca) is a free, public TURN service with no signup
+// required — fine for a small-scale/student project, though it's a
+// shared community server with no uptime/bandwidth guarantee. If this
+// ever becomes unreliable under real usage, a Metered.ca free-tier
+// account (own credentials, dedicated quota) or a self-hosted coturn
+// instance are the next steps up.
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.relay.metered.ca:80' },
+        { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
     ],
 }
 
