@@ -3,6 +3,9 @@
  *
  * Usage (from backend/):
  *   npm run diagnose:sessions -- user@example.com
+ *   npm run diagnose:sessions -- user@example.com --no-srv
+ *     (--no-srv: use when connecting fails with "queryTxt ETIMEOUT";
+ *      see scripts/srvToStandardUri.js)
  *
  * For the given user it lists every session they participate in and which
  * tab the CURRENT getUpcomingSessions / getPastSessions queries would
@@ -20,6 +23,7 @@ const mongoose = require('mongoose');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { SESSION_STATUS } = require('../config/constants');
+const srvToStandardUri   = require('./srvToStandardUri');
 
 mongoose.set('autoIndex', false);
 mongoose.set('autoCreate', false);
@@ -74,9 +78,11 @@ const explainNone = (session, now, userId) => {
 const tally = (counts, key) => { counts[key] = (counts[key] || 0) + 1; };
 
 const main = async () => {
-    const email = (process.argv[2] || '').trim().toLowerCase();
+    const args  = process.argv.slice(2);
+    const noSrv = args.includes('--no-srv');
+    const email = (args.find((a) => !a.startsWith('--')) || '').trim().toLowerCase();
     if (!email) {
-        console.error('Usage: npm run diagnose:sessions -- <user email>');
+        console.error('Usage: npm run diagnose:sessions -- <user email> [--no-srv]');
         process.exit(1);
     }
     if (!process.env.MONGO_URI) {
@@ -84,7 +90,8 @@ const main = async () => {
         process.exit(1);
     }
 
-    await mongoose.connect(process.env.MONGO_URI, { autoIndex: false, autoCreate: false });
+    const uri = noSrv ? await srvToStandardUri(process.env.MONGO_URI) : process.env.MONGO_URI;
+    await mongoose.connect(uri, { autoIndex: false, autoCreate: false });
     const db = mongoose.connection.db;
 
     const user = await db.collection('users').findOne({ email }, { projection: { _id: 1 } });
