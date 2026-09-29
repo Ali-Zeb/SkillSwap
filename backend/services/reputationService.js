@@ -221,7 +221,7 @@ const getBadgeProgress = async (userId) => {
     const T = BADGE_THRESHOLDS;
 
     const ratio = (value, target) => Math.max(0, Math.min(1, target > 0 ? value / target : 0));
-    const round1 = (n) => Math.round(n * 10) / 10;
+    const fmt1  = (n) => (Math.round(n * 10) / 10).toFixed(1);   // 5 → "5.0"
 
     // Each badge's progress is the weakest of its conditions.
     const progressFor = {
@@ -230,13 +230,13 @@ const getBadgeProgress = async (userId) => {
         expert_mentor:  [ratio(stats.sessionsAsTeacher, T.EXPERT_MENTOR_MIN_TAUGHT),
             `${stats.sessionsAsTeacher}/${T.EXPERT_MENTOR_MIN_TAUGHT} sessions taught`],
         top_teacher:    [Math.min(ratio(stats.sessionsAsTeacher, T.TOP_TEACHER_MIN_SESSIONS_TAUGHT), ratio(stats.averageRating, T.TOP_TEACHER_MIN_RATING)),
-            `${stats.sessionsAsTeacher}/${T.TOP_TEACHER_MIN_SESSIONS_TAUGHT} taught · rating ${round1(stats.averageRating)}/${T.TOP_TEACHER_MIN_RATING}`],
+            `${stats.sessionsAsTeacher}/${T.TOP_TEACHER_MIN_SESSIONS_TAUGHT} taught · rating ${fmt1(stats.averageRating)} (needs ${fmt1(T.TOP_TEACHER_MIN_RATING)})`],
         highly_rated:   [Math.min(ratio(stats.totalRatingsCount, T.HIGHLY_RATED_MIN_RATINGS_COUNT), ratio(stats.averageRating, T.HIGHLY_RATED_MIN_RATING)),
-            `${stats.totalRatingsCount}/${T.HIGHLY_RATED_MIN_RATINGS_COUNT} ratings · average ${round1(stats.averageRating)}/${T.HIGHLY_RATED_MIN_RATING}`],
+            `${stats.totalRatingsCount}/${T.HIGHLY_RATED_MIN_RATINGS_COUNT} ratings · average ${fmt1(stats.averageRating)} (needs ${fmt1(T.HIGHLY_RATED_MIN_RATING)})`],
         perfect_score:  [ratio(stats.last5Ratings.every((r) => r === 5) ? stats.last5Ratings.length : 0, T.PERFECT_SCORE_WINDOW),
             `${stats.last5Ratings.every((r) => r === 5) ? stats.last5Ratings.length : 0}/${T.PERFECT_SCORE_WINDOW} five-star ratings in a row`],
         fast_responder: [Math.min(ratio(stats.totalRequestsReceived, T.FAST_RESPONDER_MIN_REQUESTS), ratio(stats.responseRate, T.FAST_RESPONDER_MIN_RATE)),
-            `${stats.totalRequestsReceived}/${T.FAST_RESPONDER_MIN_REQUESTS} requests · ${Math.round(stats.responseRate * 100)}%/${Math.round(T.FAST_RESPONDER_MIN_RATE * 100)}% answered in 24h`],
+            `${stats.totalRequestsReceived}/${T.FAST_RESPONDER_MIN_REQUESTS} requests · ${Math.round(stats.responseRate * 100)}% answered in 24h (needs ${Math.round(T.FAST_RESPONDER_MIN_RATE * 100)}%)`],
         skill_master:   [ratio(stats.teachSkillsCount, T.SKILL_MASTER_MIN_TEACH_SKILLS),
             `${stats.teachSkillsCount}/${T.SKILL_MASTER_MIN_TEACH_SKILLS} skills offered to teach`]
     };
