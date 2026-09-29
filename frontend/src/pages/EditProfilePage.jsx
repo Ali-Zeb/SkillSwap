@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { selectCurrentUser, setCredentials } from '../features/auth/authSlice'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
+import { getFullNameError, normalizeName } from '../utils/validators'
 const SKILL_CATEGORIES = [
     'Technology', 'Programming', 'Design', 'Business', 'Marketing',
     'Music', 'Art', 'Language', 'Science', 'Mathematics', 'Other',
@@ -126,11 +127,18 @@ const EditProfilePage = function() {
     }
     const handleInfoSave = async function(e) {
         e.preventDefault()
-        setSaving(true)
         setError(null)
         setSuccess(null)
+        // Validate the name only when it was changed, matching the backend,
+        // so users with legacy names can still save their other fields.
+        const fullName = normalizeName(form.fullName)
+        if (fullName !== normalizeName(user?.fullName)) {
+            const nameError = getFullNameError(fullName)
+            if (nameError) { setError(nameError); return }
+        }
+        setSaving(true)
         try {
-            const { data } = await api.put('/users/profile', form)
+            const { data } = await api.put('/users/profile', { ...form, fullName })
             dispatch(setCredentials({ user: data.user }))
             setSuccess('Profile updated successfully!')
             setTimeout(function() { setSuccess(null) }, 3000)

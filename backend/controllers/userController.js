@@ -2,6 +2,7 @@ const User               = require('../models/User');
 const Skill              = require('../models/Skill');
 const asyncHandler       = require('../utils/asyncHandler');
 const userMetricsService = require('../services/userMetricsService');
+const { normalizeName, getFullNameError } = require('../utils/nameValidation');
 
 // @desc    Get the current user's full profile
 // @route   GET /api/users/profile
@@ -32,7 +33,18 @@ const updateProfile = asyncHandler(async (req, res) => {
     const { fullName, headline, about, location } = req.body;
 
     const updates = {};
-    if (fullName !== undefined) updates.fullName = fullName;
+
+    // The real-name rule applies only when the name is being changed, so
+    // users whose legacy names predate the rule can still save other fields
+    // (the edit form always resends the current name).
+    if (fullName !== undefined && fullName !== normalizeName(req.user.fullName)) {
+        const nameError = getFullNameError(fullName);
+        if (nameError) {
+            return res.status(400).json({ success: false, message: nameError });
+        }
+        updates.fullName = fullName;
+    }
+
     if (headline !== undefined) updates.headline = headline;
     if (about    !== undefined) updates.about    = about;
     if (location !== undefined) updates.location = location;

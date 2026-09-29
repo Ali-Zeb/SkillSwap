@@ -9,6 +9,7 @@ import {
     selectIsAuthenticated,
 } from '../../features/auth/authSlice'
 import Spinner from '../../components/ui/Spinner'
+import { getFullNameError, normalizeName } from '../../utils/validators'
 
 const FEATURES = [
     'Create your skill profile',
@@ -40,8 +41,8 @@ const RegisterPage = function() {
 
     const validate = function() {
         const errs = {}
-        if (!fullName.trim())                errs.fullName        = 'Full name is required'
-        else if (fullName.trim().length < 2) errs.fullName        = 'At least 2 characters'
+        const nameError = getFullNameError(fullName)
+        if (nameError)                       errs.fullName        = nameError
         if (!email.trim())                   errs.email           = 'Email is required'
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Please enter a valid email'
         if (!password)                       errs.password        = 'Password is required'
@@ -59,7 +60,7 @@ const RegisterPage = function() {
             return
         }
         setErrors({})
-        const result = await dispatch(registerUser({ fullName, email, password }))
+        const result = await dispatch(registerUser({ fullName: normalizeName(fullName), email, password }))
         if (registerUser.fulfilled.match(result)) {
             navigate('/dashboard', { replace: true })
         }

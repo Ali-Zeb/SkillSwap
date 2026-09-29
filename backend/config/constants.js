@@ -45,6 +45,7 @@ const DAYS_OF_WEEK = [
 ];
 
 const LIMITS = {
+    FULL_NAME_MIN:            2,
     FULL_NAME_MAX:            50,
     HEADLINE_MAX:             100,
     ABOUT_MAX:                500,
@@ -128,6 +129,19 @@ const BADGE_THRESHOLDS = {
 // Profile completion weights — must sum to 100.
 // Used exclusively by utils/profileCompletion.js.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Real-name rule. A "word" is one or more letters (Latin incl. accented, or
+// Arabic/Urdu script), optionally joined by a single . ' or - to more
+// letters ("Ali-Zeb", "O'Brien", "M.Ali"), and may end with a dot ("M.").
+// Words are separated by exactly one space ("M. Ihtesham", "Ali Zeb").
+// Digits and any other symbols are rejected. Length (2–50) is checked
+// separately against LIMITS so the messages can be specific.
+// The same pattern is mirrored in frontend/src/utils/validators.js.
+// ---------------------------------------------------------------------------
+const NAME_LETTER = "[A-Za-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u024F\\u0621-\\u063A\\u0641-\\u0652\\u0671-\\u06D3\\u06FA-\\u06FC]";
+const NAME_WORD   = `${NAME_LETTER}+(?:[.'-]${NAME_LETTER}+)*\\.?`;
+const NAME_REGEX  = new RegExp(`^${NAME_WORD}(?: ${NAME_WORD})*$`);
+
 const PROFILE_COMPLETION_WEIGHTS = {
     avatar:     20,
     headline:   15,
@@ -149,5 +163,6 @@ module.exports = {
     BADGE_TYPES,
     BADGE_META,
     BADGE_THRESHOLDS,
-    PROFILE_COMPLETION_WEIGHTS
+    PROFILE_COMPLETION_WEIGHTS,
+    NAME_REGEX
 };
