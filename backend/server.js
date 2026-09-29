@@ -35,6 +35,13 @@ connectDB();
 require('./services/emailService').checkEmailConfig();
 
 const app    = express();
+
+// Render (and most hosts) sit behind one reverse proxy that sets
+// X-Forwarded-For. Trusting exactly one hop makes req.ip the real client
+// IP, so every rate limiter keys by the client — not the proxy — and
+// express-rate-limit stops raising ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+// Must be set before any middleware that reads req.ip.
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Frontend origins allowed to call this API. Both the local dev origin and
