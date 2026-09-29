@@ -6,7 +6,13 @@ import AdminLayout from '../../components/layout/AdminLayout'
 import Pagination from '../../components/ui/Pagination'
 import Spinner from '../../components/ui/Spinner'
 import useAdminList from '../../hooks/useAdminList'
-import { formatDate, getAvatarUrl } from '../../utils/helpers'
+import { UserX, UserCheck, ShieldCheck, ShieldOff } from 'lucide-react'
+import { getAvatarUrl } from '../../utils/helpers'
+
+// "Sep 29, 2026" — keeps the Joined column on one line.
+const formatShortDate = function(date) {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 const DeactivateDialog = function({ user, onCancel, onConfirm, busy, error }) {
     const [reason, setReason] = useState('')
@@ -165,21 +171,27 @@ const AdminUsersPage = function() {
                                                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4, maxWidth: 240, overflowWrap: 'anywhere' }}>{u.deactivationReason}</div>
                                                 )}
                                             </td>
-                                            <td data-label="Joined">{formatDate(u.createdAt)}</td>
+                                            <td data-label="Joined" style={{ whiteSpace: 'nowrap' }}>{formatShortDate(u.createdAt)}</td>
                                             <td data-label="Actions" style={{ whiteSpace: 'nowrap' }}>
                                                 {isMe ? (
                                                     <span style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>—</span>
                                                 ) : (
-                                                    // One row: Deactivate/Reactivate on the left, role change on the right
-                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap', alignItems: 'center' }}>
+                                                    // One row: access change on the left, role change on the right
+                                                    <div className="admin-actions">
                                                         {u.isActive ? (
-                                                            <button type="button" className="admin-btn admin-btn--danger" disabled={busy}
-                                                                onClick={function() { setDialogError(null); setDialogUser(u) }}>Deactivate</button>
+                                                            <button type="button" className="admin-btn admin-btn--sm admin-btn--danger" disabled={busy}
+                                                                onClick={function() { setDialogError(null); setDialogUser(u) }}>
+                                                                <UserX size={14} aria-hidden="true" /> Deactivate
+                                                            </button>
                                                         ) : (
-                                                            <button type="button" className="admin-btn" disabled={busy} onClick={function() { activate(u) }}>Reactivate</button>
+                                                            <button type="button" className="admin-btn admin-btn--sm admin-btn--success" disabled={busy} onClick={function() { activate(u) }}>
+                                                                <UserCheck size={14} aria-hidden="true" /> Reactivate
+                                                            </button>
                                                         )}
-                                                        <button type="button" className="admin-btn" disabled={busy} onClick={function() { changeRole(u) }}>
-                                                            {u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                                                        <button type="button" className="admin-btn admin-btn--sm" disabled={busy} onClick={function() { changeRole(u) }}>
+                                                            {u.role === 'admin'
+                                                                ? <><ShieldOff size={14} aria-hidden="true" /> Remove admin</>
+                                                                : <><ShieldCheck size={14} aria-hidden="true" /> Make admin</>}
                                                         </button>
                                                     </div>
                                                 )}
