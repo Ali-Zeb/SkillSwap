@@ -62,7 +62,9 @@ const LIMITS = {
     NOTIFICATION_TITLE_MAX:   100,
     NOTIFICATION_MESSAGE_MAX: 300,
     REPORT_DESCRIPTION_MAX:   1000,
-    RESOLUTION_NOTE_MAX:      1000
+    RESOLUTION_NOTE_MAX:      1000,
+    SUPPORT_SUBJECT_MAX:      120,
+    SUPPORT_MESSAGE_MAX:      2000
 };
 
 const REPORT_REASONS = {
@@ -130,8 +132,31 @@ const AUDIT_ACTIONS = {
     USER_DEACTIVATED: 'user_deactivated',
     USER_ACTIVATED:   'user_activated',
     ROLE_CHANGED:     'role_changed',
-    REPORT_UPDATED:   'report_updated'
+    REPORT_UPDATED:   'report_updated',
+    SUPPORT_REPLIED:  'support_replied',
+    SUPPORT_UPDATED:  'support_updated',
+    DATA_EXPORTED:    'data_exported'
 };
+
+// ─── Support tickets ────────────────────────────────────────────────────────
+const SUPPORT_CATEGORIES = ['account', 'bug', 'session', 'report_appeal', 'feedback', 'other'];
+// The public /contact form (no login) is limited to what a locked-out user needs.
+const PUBLIC_SUPPORT_CATEGORIES = ['account', 'report_appeal', 'other'];
+const SUPPORT_CATEGORY_LABELS = {
+    account:       'Account',
+    bug:           'Bug report',
+    session:       'Session problem',
+    report_appeal: 'Report / deactivation appeal',
+    feedback:      'Feedback',
+    other:         'Other'
+};
+const SUPPORT_STATUS = {
+    OPEN:        'open',
+    IN_PROGRESS: 'in_progress',
+    RESOLVED:    'resolved',
+    CLOSED:      'closed'
+};
+const SUPPORT_PRIORITY = ['low', 'normal', 'high'];
 
 const NOTIFICATION_TYPES = {
     REQUEST_RECEIVED:  'request_received',
@@ -146,7 +171,9 @@ const NOTIFICATION_TYPES = {
     RATING_RECEIVED:   'rating_received',
     NEW_MESSAGE:       'new_message',
     BADGE_EARNED:      'badge_earned',
-    REPORT_RECEIVED:   'report_received'
+    REPORT_RECEIVED:   'report_received',
+    SUPPORT_TICKET_NEW: 'support_ticket_new',
+    SUPPORT_REPLY:      'support_reply'
 };
 
 // ---------------------------------------------------------------------------
@@ -243,5 +270,10 @@ module.exports = {
     USER_ROLES,
     AUDIT_ACTIONS,
     AUTH_TOKEN_TTL,
-    isDisposableEmail
+    isDisposableEmail,
+    SUPPORT_CATEGORIES,
+    PUBLIC_SUPPORT_CATEGORIES,
+    SUPPORT_CATEGORY_LABELS,
+    SUPPORT_STATUS,
+    SUPPORT_PRIORITY
 };

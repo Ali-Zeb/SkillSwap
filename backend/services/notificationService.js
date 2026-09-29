@@ -221,6 +221,40 @@ const reportReceived = async (report, reportedUserName, io) => {
     ));
 };
 
+const clip = (text, max) => (text.length > max ? text.slice(0, max - 1) + '…' : text);
+
+/**
+ * Notifies every active admin about a new support ticket.
+ */
+const supportTicketNew = async (ticket, io) => {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
+    await Promise.allSettled(admins.map((admin) =>
+        createNotification(
+            admin._id,
+            NOTIFICATION_TYPES.SUPPORT_TICKET_NEW,
+            'New Support Ticket',
+            clip(`${ticket.name}: ${ticket.subject}`, 300),
+            `/admin/support/${ticket._id}`,
+            { ticketId: ticket._id },
+            io
+        )
+    ));
+};
+
+/**
+ * Tells a member the support team replied to (or resolved) their ticket.
+ */
+const supportReply = (userId, ticket, resolved, io) =>
+    createNotification(
+        userId,
+        NOTIFICATION_TYPES.SUPPORT_REPLY,
+        resolved ? 'Support request resolved' : 'Support replied',
+        clip(`${resolved ? 'Resolved' : 'New reply'}: ${ticket.subject}`, 300),
+        `/support/${ticket._id}`,
+        { ticketId: ticket._id },
+        io
+    );
+
 const badgeEarned = (userId, badgeLabel, badgeIcon, io) =>
     createNotification(
         userId,
@@ -245,5 +279,7 @@ module.exports = {
     ratingReceived,
     newMessage,
     badgeEarned,
-    reportReceived
+    reportReceived,
+    supportTicketNew,
+    supportReply
 };

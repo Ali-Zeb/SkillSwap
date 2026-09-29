@@ -18,12 +18,13 @@ const AuditLogSchema = new mongoose.Schema({
     },
     targetType: {
         type:     String,
-        enum:     ['user', 'report', 'session'],
+        enum:     ['user', 'report', 'session', 'support_ticket', 'export'],
         required: true
     },
+    // Null for actions without a single target document (e.g. exports).
     targetId: {
-        type:     mongoose.Schema.Types.ObjectId,
-        required: true
+        type:    mongoose.Schema.Types.ObjectId,
+        default: null
     },
     metadata: {
         type:    mongoose.Schema.Types.Mixed,

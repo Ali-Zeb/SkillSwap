@@ -193,6 +193,7 @@ const Navbar = function() {
                                         { to: '/profile/edit', label: 'Edit Profile' },
                                         { to: '/sessions',     label: 'My Sessions'  },
                                         { to: '/ratings',      label: 'Ratings'      },
+                                        { to: '/support',      label: 'Help & Support' },
                                     ].map(function(item) {
                                         return (
                                             <Link

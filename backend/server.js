@@ -31,6 +31,7 @@ const notificationRoutes = require('./routes/notifications');
 const reportRoutes       = require('./routes/reports');
 const adminRoutes        = require('./routes/admin');
 const badgeRoutes        = require('./routes/badges');
+const supportRoutes      = require('./routes/support');
 
 // Connect to MongoDB
 connectDB();
@@ -126,6 +127,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports',       ...memberOnly, reportRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/badges',        ...memberOnly, badgeRoutes);
+app.use('/api/support',       supportRoutes);   // public form + member tickets (guards inside)
 
 // Socket.io
 registerSocketHandlers(io);

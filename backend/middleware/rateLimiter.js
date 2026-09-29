@@ -52,4 +52,18 @@ const emailLimiter = rateLimit({
     legacyHeaders:   false,
 })
 
-module.exports = { generalLimiter, authLimiter, reportLimiter, emailLimiter }
+/**
+ * New support tickets and replies: 10 per hour per client (IP for the public
+ * form, user id when signed in). Rejected attempts don't count.
+ */
+const supportLimiter = rateLimit({
+    windowMs:     60 * 60 * 1000,
+    max:          10,
+    keyGenerator: (req) => (req.user ? `support_${req.user.id}` : `support_ip_${req.ip}`),
+    skipFailedRequests: true,
+    message:      { success: false, message: 'Too many support messages. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders:   false,
+})
+
+module.exports = { generalLimiter, authLimiter, reportLimiter, emailLimiter, supportLimiter }

@@ -3,7 +3,10 @@ const router  = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
 const { validateBody }       = require('../middleware/validate');
-const { LIMITS, USER_ROLES, REPORT_STATUS } = require('../config/constants');
+const { LIMITS, USER_ROLES, REPORT_STATUS, SUPPORT_STATUS, SUPPORT_PRIORITY } = require('../config/constants');
+const {
+    listTickets, awaitingCount, getTicket, replyToTicket, updateTicket
+} = require('../controllers/adminSupportController');
 
 const {
     getStats,
@@ -53,5 +56,24 @@ router.patch(
 );
 
 router.get('/audit-logs', getAuditLogs);
+
+// Support tickets
+router.get('/support',       listTickets);
+router.get('/support/count', awaitingCount);
+router.get('/support/:id',   getTicket);
+router.post(
+    '/support/:id/messages',
+    validateBody({ body: { required: true, type: 'string', min: 1, max: LIMITS.SUPPORT_MESSAGE_MAX, transform: (v) => (typeof v === 'string' ? v.trim() : v) } }),
+    replyToTicket
+);
+router.patch(
+    '/support/:id',
+    validateBody({
+        status:     { type: 'string', enum: Object.values(SUPPORT_STATUS) },
+        priority:   { type: 'string', enum: SUPPORT_PRIORITY },
+        assignedTo: { type: 'string' }
+    }),
+    updateTicket
+);
 
 module.exports = router;

@@ -84,4 +84,32 @@ const passwordChanged = ({ name, loginUrl }) => ({
     text: `Hi ${name},\n\nYour SkillSwap password was just changed and you were signed out on all devices.\nIf this wasn't you, reset your password immediately and contact support.\n\nLog in: ${loginUrl}`
 });
 
-module.exports = { verifyEmail, passwordReset, passwordChanged };
+const supportReceived = ({ name, subject, url }) => ({
+    subject: `We received your request: ${subject}`,
+    html: layout({
+        preheader: 'Our team will get back to you soon.',
+        heading:   'We received your request',
+        bodyHtml:  paragraph(`Hi ${name}, thanks for contacting SkillSwap support about "${subject}".`)
+            + paragraph('Our team usually replies within 2 business days. We will email you when there is an update.'),
+        button:    url ? { label: 'View your request', url } : null
+    }),
+    text: `Hi ${name},\n\nThanks for contacting SkillSwap support about "${subject}". Our team usually replies within 2 business days and will email you when there is an update.${url ? `\n\nView your request: ${url}` : ''}`
+});
+
+const supportReply = ({ name, subject, excerpt, url, resolved }) => ({
+    subject: resolved ? `Resolved: ${subject}` : `New reply: ${subject}`,
+    html: layout({
+        preheader: resolved ? 'Your support request was resolved.' : 'The support team replied to your request.',
+        heading:   resolved ? 'Your request was resolved' : 'The support team replied',
+        bodyHtml:  paragraph(`Hi ${name},`)
+            + (excerpt ? `<blockquote style="margin:0 0 12px;padding:12px 16px;background:#f8fafc;border-left:3px solid #2563eb;border-radius:4px;font-size:14px;line-height:1.6;color:#334155;">${escapeHtml(excerpt)}</blockquote>` : '')
+            + paragraph(resolved
+                ? 'If this did not solve your problem, reply to the request and we will reopen it.'
+                : 'You can read the full conversation and reply below.'),
+        button:    url ? { label: 'Open your request', url } : null,
+        footnote:  url ? null : 'Reply to this email address is not monitored — use the contact form on our website to follow up.'
+    }),
+    text: `Hi ${name},\n\n${resolved ? 'Your support request was resolved.' : 'The support team replied to your request.'}${excerpt ? `\n\n"${excerpt}"` : ''}\n\n${url ? `Open your request: ${url}` : 'Use the contact form on our website to follow up.'}`
+});
+
+module.exports = { verifyEmail, passwordReset, passwordChanged, supportReceived, supportReply };

@@ -1,27 +1,47 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Flag, CalendarDays, ScrollText, Settings, X } from 'lucide-react'
+import { LayoutDashboard, Users, Flag, CalendarDays, ScrollText, Settings, X, LifeBuoy } from 'lucide-react'
+import api from '../../api/axios'
 import AdminTopBar from './AdminTopBar'
 
 const ADMIN_LINKS = [
     { to: '/admin',            label: 'Dashboard',    Icon: LayoutDashboard, end: true },
     { to: '/admin/users',      label: 'Users',        Icon: Users },
     { to: '/admin/reports',    label: 'User Reports', Icon: Flag },
+    { to: '/admin/support',    label: 'Support',      Icon: LifeBuoy, badgeKey: 'support' },
     { to: '/admin/sessions',   label: 'Sessions',     Icon: CalendarDays },
     { to: '/admin/audit-logs', label: 'Audit Log',    Icon: ScrollText },
 ]
 
 const SETTINGS_LINK = { to: '/admin/settings', label: 'Settings', Icon: Settings }
 
-const SideLink = function({ link, onNavigate }) {
+const SideLink = function({ link, onNavigate, badge }) {
     const { to, label, Icon, end } = link
     return (
         <NavLink to={to} end={end} onClick={onNavigate}
             className={function({ isActive }) { return 'admin-nav-link' + (isActive ? ' admin-nav-link--active' : '') }}>
             <Icon size={18} strokeWidth={2} aria-hidden="true" />
             <span>{label}</span>
+            {badge > 0 && <span className="admin-nav-badge" aria-label={badge + ' waiting'}>{badge > 99 ? '99+' : badge}</span>}
         </NavLink>
     )
+}
+
+// Tickets waiting for an admin reply — refreshed every 60 s.
+const useSupportBadge = function() {
+    const [count, setCount] = useState(0)
+    useEffect(function() {
+        let cancelled = false
+        const load = function() {
+            api.get('/admin/support/count')
+                .then(function({ data }) { if (!cancelled) setCount(data.count || 0) })
+                .catch(function() {})
+        }
+        load()
+        const id = setInterval(load, 60000)
+        return function() { cancelled = true; clearInterval(id) }
+    }, [])
+    return count
 }
 
 /**
@@ -31,6 +51,7 @@ const SideLink = function({ link, onNavigate }) {
 const AdminLayout = function({ title, subtitle, actions, children }) {
     const [drawerOpen, setDrawerOpen] = useState(false)
     const location = useLocation()
+    const supportBadge = useSupportBadge()
     const close = function() { setDrawerOpen(false) }
 
     // Escape closes the mobile drawer; the page behind it doesn't scroll.
@@ -61,7 +82,9 @@ const AdminLayout = function({ title, subtitle, actions, children }) {
 
                 <nav className="admin-nav">
                     <p className="admin-nav-section">Overview</p>
-                    {ADMIN_LINKS.map(function(link) { return <SideLink key={link.to} link={link} onNavigate={close} /> })}
+                    {ADMIN_LINKS.map(function(link) {
+                        return <SideLink key={link.to} link={link} onNavigate={close} badge={link.badgeKey === 'support' ? supportBadge : 0} />
+                    })}
                     <p className="admin-nav-section">Account</p>
                     <SideLink link={SETTINGS_LINK} onNavigate={close} />
                 </nav>
