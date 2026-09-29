@@ -1,4 +1,5 @@
 const express       = require('express');
+const mongoose      = require('mongoose');
 const cors          = require('cors');
 const dotenv        = require('dotenv');
 const helmet        = require('helmet');
@@ -96,10 +97,16 @@ app.use(generalLimiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check
+// Health check (Render → Health Check Path: /api/health). Returns 503 until
+// MongoDB is connected, so a new deploy only receives traffic once it can
+// actually serve requests. No database query — it is cheap to poll.
 app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        success:   true,
-        message:   'SkillSwap API is running',
+    const dbConnected = mongoose.connection.readyState === 1;
+    res.status(dbConnected ? 200 : 503).json({
+        success:   dbConnected,
+        message:   dbConnected ? 'SkillSwap API is running' : 'Database not connected',
+        database:  dbConnected ? 'connected' : 'disconnected',
+        uptime:    Math.round(process.uptime()),
         timestamp: new Date().toISOString()
     });
 });
