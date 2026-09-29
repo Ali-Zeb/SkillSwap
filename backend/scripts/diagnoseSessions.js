@@ -96,7 +96,8 @@ const main = async () => {
 
     const user = await db.collection('users').findOne({ email }, { projection: { _id: 1 } });
     if (!user) {
-        console.error('No user found with that email.');
+        const userCount = await db.collection('users').countDocuments({});
+        console.error(`No user found with that email. (Connected to database "${db.databaseName}", which has ${userCount} users.)`);
         return;
     }
     const userId = user._id;
