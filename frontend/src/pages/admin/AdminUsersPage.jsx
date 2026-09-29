@@ -166,11 +166,12 @@ const AdminUsersPage = function() {
                                                 )}
                                             </td>
                                             <td data-label="Joined">{formatDate(u.createdAt)}</td>
-                                            <td data-label="Actions">
+                                            <td data-label="Actions" style={{ whiteSpace: 'nowrap' }}>
                                                 {isMe ? (
                                                     <span style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>—</span>
                                                 ) : (
-                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                    // One row: Deactivate/Reactivate on the left, role change on the right
+                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap', alignItems: 'center' }}>
                                                         {u.isActive ? (
                                                             <button type="button" className="admin-btn admin-btn--danger" disabled={busy}
                                                                 onClick={function() { setDialogError(null); setDialogUser(u) }}>Deactivate</button>

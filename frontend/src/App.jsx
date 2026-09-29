@@ -31,6 +31,9 @@ import AdminSettingsPage    from './pages/admin/AdminSettingsPage'
 import AdminSupportPage     from './pages/admin/AdminSupportPage'
 import AdminSupportTicketPage from './pages/admin/AdminSupportTicketPage'
 import SupportPage          from './pages/SupportPage'
+import AboutPage            from './pages/public/AboutPage'
+import ContactPage          from './pages/public/ContactPage'
+import LegalPage            from './pages/public/LegalPage'
 import SupportTicketPage    from './pages/SupportTicketPage'
 import { isAdminUser, homePathFor } from './utils/roles'
 import Spinner              from './components/ui/Spinner'
@@ -103,6 +106,11 @@ const App = function() {
     return (
         <Routes>
             <Route path="/" element={<LandingPage />} />
+            {/* Public pages — available signed in or out */}
+            <Route path="/about"   element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+            <Route path="/terms"   element={<LegalPage doc="terms" />} />
             <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/check-email"            element={<PublicRoute><CheckEmailPage /></PublicRoute>} />

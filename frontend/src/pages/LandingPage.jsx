@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import Footer from '../components/layout/Footer'
 
 const NAV_ITEMS = [
     { label: 'Home',         href: '#home'         },
@@ -52,6 +53,8 @@ const LandingPage = function () {
                                 </button>
                             )
                         })}
+                        <Link to="/about" style={{ padding: '0.4rem 0.75rem', fontSize: '0.9rem', color: '#4b5563', textDecoration: 'none', borderRadius: 8 }}>About</Link>
+                        <Link to="/contact" style={{ padding: '0.4rem 0.75rem', fontSize: '0.9rem', color: '#4b5563', textDecoration: 'none', borderRadius: 8 }}>Contact</Link>
                         <Link to="/login" style={{ marginLeft: 12, padding: '0.4375rem 1.125rem', fontSize: '0.9rem', fontWeight: 500, color: '#2563eb', border: '1.5px solid #2563eb', borderRadius: 8, textDecoration: 'none' }}>
                             Login
                         </Link>
@@ -214,56 +217,8 @@ const LandingPage = function () {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer style={{ background: '#1e293b', color: 'white', padding: '3rem 1.5rem 1.5rem' }}>
-                <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
-                        <div>
-                            <span style={{ fontWeight: 700, fontSize: '1.25rem', background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', display: 'block', marginBottom: '0.75rem' }}>
-                                SkillSwap
-                            </span>
-                            <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.6 }}>
-                                AI-Powered Peer Skill Exchange Platform
-                            </p>
-                        </div>
-                        <div>
-                            <h4 style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'white', marginBottom: '1rem' }}>Quick Links</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {['Home', 'Features', 'How It Works'].map(function (item) {
-                                    return (
-                                        <button
-                                            key={item}
-                                            onClick={function () { scrollTo('#' + item.toLowerCase().replace(/ /g, '-')) }}
-                                            style={{ fontSize: '0.875rem', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, fontFamily: 'inherit' }}
-                                        >
-                                            {item}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'white', marginBottom: '1rem' }}>Account</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <Link to="/login"    style={{ fontSize: '0.875rem', color: '#94a3b8', textDecoration: 'none' }}>Login</Link>
-                                <Link to="/register" style={{ fontSize: '0.875rem', color: '#94a3b8', textDecoration: 'none' }}>Sign Up</Link>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'white', marginBottom: '1rem' }}>Contact</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>support@skillswap.com</span>
-                                <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>University of Peshawar</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', textAlign: 'center' }}>
-                        <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                            2026 SkillSwap. All rights reserved. Built as a Final Year Project.
-                        </p>
-                    </div>
-                </div>
-            </footer>
+            {/* Shared site footer */}
+            <Footer />
 
         </div>
     )

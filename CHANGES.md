@@ -94,3 +94,12 @@ New `npm` scripts in `backend/`:
 All support `--no-srv` for networks where the MongoDB SRV/TXT DNS lookup times out.
 
 New environment variables, documented in `backend/.env.example` and the README: `EMAIL_PROVIDER`, `BREVO_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`. `CLIENT_URL` is now also used for email links.
+
+---
+
+## 8. Public Pages & Legal Drafts
+
+- Public pages available without login: **About** (`/about` — problem, how it works, team), **Contact** (`/contact` — the public support form plus support email and response time), **Privacy Policy** (`/privacy`) and **Terms of Service** (`/terms`), each with its own page title and meta description.
+- All page text lives in one data file (`frontend/src/content/siteContent.js`) so it can be edited without touching components.
+- A shared footer (Explore, Members, Legal, contact details) appears on the landing page, public pages and all member pages; it is never shown inside the admin panel.
+- **The Privacy Policy and Terms of Service are plain-language drafts ("Last updated 30 September 2026"). They must be reviewed by a qualified legal professional before any commercial launch.** They cover accounts, email verification, peer-to-peer session video (not stored on our servers), recordings (saved only on the recorder's device; the other participant is notified), uploads stored on Cloudinary, reports and account deactivation, and data-deletion requests via support.
