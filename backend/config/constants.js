@@ -138,13 +138,13 @@ const BADGE_TYPES = {
 // notificationService when building badge-earned notification messages.
 // ---------------------------------------------------------------------------
 const BADGE_META = {
-    first_session:  { label: 'First Session',  icon: '🥇' },
-    expert_mentor:  { label: 'Expert Mentor',  icon: '🏆' },
-    top_teacher:    { label: 'Top Teacher',    icon: '🎓' },
-    highly_rated:   { label: 'Highly Rated',   icon: '⭐' },
-    perfect_score:  { label: 'Perfect Score',  icon: '💯' },
-    fast_responder: { label: 'Fast Responder', icon: '⚡' },
-    skill_master:   { label: 'Skill Master',   icon: '🎯' }
+    first_session:  { label: 'First Session',  icon: '🥇', description: 'Complete your first session' },
+    expert_mentor:  { label: 'Expert Mentor',  icon: '🏆', description: 'Teach 10 completed sessions' },
+    top_teacher:    { label: 'Top Teacher',    icon: '🎓', description: 'Teach 5 sessions with an average rating of 4.8+' },
+    highly_rated:   { label: 'Highly Rated',   icon: '⭐', description: 'Receive 10 ratings with an average of 4.0+' },
+    perfect_score:  { label: 'Perfect Score',  icon: '💯', description: 'Get five 5-star ratings in a row' },
+    fast_responder: { label: 'Fast Responder', icon: '⚡', description: 'Answer 80% of 5+ requests within 24 hours' },
+    skill_master:   { label: 'Skill Master',   icon: '🎯', description: 'Offer to teach 3 or more skills' }
 };
 
 // ---------------------------------------------------------------------------

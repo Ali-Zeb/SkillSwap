@@ -28,6 +28,7 @@ const ratingRoutes       = require('./routes/ratings');
 const notificationRoutes = require('./routes/notifications');
 const reportRoutes       = require('./routes/reports');
 const adminRoutes        = require('./routes/admin');
+const badgeRoutes        = require('./routes/badges');
 
 // Connect to MongoDB
 connectDB();
@@ -106,6 +107,7 @@ app.use('/api/ratings',       ratingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports',       reportRoutes);
 app.use('/api/admin',         adminRoutes);
+app.use('/api/badges',        badgeRoutes);
 
 // Socket.io
 registerSocketHandlers(io);

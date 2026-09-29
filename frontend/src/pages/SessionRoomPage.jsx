@@ -532,8 +532,8 @@ const SessionRoomPage = function () {
     }, [newNote])
 
     const handleLeave = useCallback(async function () {
+        // Leaving only exits the room; completing is an explicit action on the Sessions page.
         stopRecording()
-        try { await api.put('/sessions/' + id + '/complete') } catch (error) { console.error('Failed to mark session complete:', error.message) }
         navigate('/sessions')
     }, [id, navigate, stopRecording])
 

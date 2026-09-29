@@ -2,6 +2,7 @@ const Session             = require('../models/Session');
 const { SESSION_STATUS }  = require('../config/constants');
 const asyncHandler        = require('../utils/asyncHandler');
 const notificationService = require('../services/notificationService');
+const reputationService   = require('../services/reputationService');
 
 /**
  * Returns the Socket.io instance registered on the Express app.
@@ -464,16 +465,31 @@ const completeSession = asyncHandler(async (req, res) => {
         return res.status(403).json({ success: false, message: 'Not authorized to complete this session' });
     }
 
-    if (session.status === SESSION_STATUS.CANCELLED) {
-        return res.status(400).json({ success: false, message: 'Cannot complete a cancelled session' });
+    const completable = [SESSION_STATUS.SCHEDULED, SESSION_STATUS.CONFIRMED];
+    if (!completable.includes(session.status)) {
+        return res.status(400).json({
+            success: false,
+            message: session.status === SESSION_STATUS.COMPLETED
+                ? 'Session is already completed'
+                : `Only scheduled or confirmed sessions can be completed — current status is "${session.status}"`
+        });
     }
 
-    if (session.status === SESSION_STATUS.COMPLETED) {
-        return res.status(400).json({ success: false, message: 'Session is already completed' });
+    if (session.date > new Date()) {
+        return res.status(400).json({ success: false, message: 'A session can only be completed after its start time' });
     }
 
-    session.status = SESSION_STATUS.COMPLETED;
-    await session.save();
+    // Atomic transition: if two requests race, only one flips the status, so
+    // notifications and the badge pipeline run exactly once.
+    const updated = await Session.findOneAndUpdate(
+        { _id: session._id, status: { $in: completable } },
+        { $set: { status: SESSION_STATUS.COMPLETED } },
+        { new: true }
+    );
+    if (!updated) {
+        return res.status(409).json({ success: false, message: 'Session is already completed' });
+    }
+    session.status = updated.status;
 
     const io          = getIo(req);
     // Either participant may have been deleted (populate → null); only
@@ -494,6 +510,14 @@ const completeSession = asyncHandler(async (req, res) => {
             .sessionCompleted(learner._id, teacher?.fullName || 'your partner', session._id, session.title, io)
             .catch((err) => console.error('sessionCompleted notification (learner) failed:', err.message));
     }
+
+    // Completed-session badges (First Session, Expert Mentor, ...) for both
+    // participants — fire-and-forget, like ratingController.
+    [teacher, learner].filter(Boolean).forEach((participant) => {
+        reputationService
+            .evaluateUserBadges(participant._id, io)
+            .catch((err) => console.error('evaluateUserBadges after completion failed:', err.message));
+    });
 
     res.status(200).json({
         success: true,

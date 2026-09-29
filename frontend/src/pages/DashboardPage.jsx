@@ -5,6 +5,7 @@ import { selectCurrentUser } from '../features/auth/authSlice'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
+import BadgesSection from '../components/ui/BadgesSection'
 import {
     formatDateTime,
     formatDuration,
@@ -407,6 +408,13 @@ const DashboardPage = () => {
                         </div>
                     )}
                 </div>
+
+                {/* ── Badges (compact) ── */}
+                {user?._id && (
+                    <div style={{ marginTop: '1.5rem' }}>
+                        <BadgesSection userId={user._id} compact />
+                    </div>
+                )}
 
                 {/* ── Profile completion nudge ── */}
                 {profileIncomplete && (

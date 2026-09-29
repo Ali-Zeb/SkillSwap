@@ -6,6 +6,7 @@ import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
 import ReportModal from '../components/ui/ReportModal'
+import BadgesSection from '../components/ui/BadgesSection'
 import {
     getAvatarUrl,
     formatReputation,
@@ -356,6 +357,11 @@ const ProfilePage = () => {
                             </div>
                         )
                     })}
+                </div>
+
+                {/* ── Badges (earned + locked with progress) ── */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <BadgesSection userId={profileUser._id} isOwn={isOwnProfile} />
                 </div>
 
                 {/* ── Tabs ── */}

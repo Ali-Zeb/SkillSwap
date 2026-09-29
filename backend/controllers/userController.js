@@ -2,6 +2,7 @@ const User               = require('../models/User');
 const Skill              = require('../models/Skill');
 const asyncHandler       = require('../utils/asyncHandler');
 const userMetricsService = require('../services/userMetricsService');
+const reputationService  = require('../services/reputationService');
 const { normalizeName, getFullNameError } = require('../utils/nameValidation');
 
 // @desc    Get the current user's full profile
@@ -162,6 +163,13 @@ const addUserSkill = asyncHandler(async (req, res) => {
     // Skills affect two profile completion categories (teachSkill, learnSkill)
     // — recompute after every skill change.
     await userMetricsService.updateProfileCompletion(req.user.id, user);
+
+    // Skill Master depends on the number of teach skills.
+    if (type === 'teach') {
+        reputationService
+            .evaluateUserBadges(req.user.id, req.app.get('io') || null)
+            .catch((err) => console.error('evaluateUserBadges (add skill) failed:', err.message));
+    }
 
     res.status(200).json({
         success: true,
