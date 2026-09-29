@@ -19,7 +19,7 @@
 - **Skill Matching** — Peer matching engine based on skills offered vs. skills wanted
 - **Real-time Messaging** — Socket.io powered chat between matched users
 - **Live Video Sessions** — WebRTC-based video calling for skill exchange sessions, in a custom-built session room with a dark, Google Meet–style interface
-- **AI Assistant** — Powered by Groq API (Llama 3.3 70B) with a local rule-based fallback for reliability
+- **AI Assistant** — Powered by the Groq API (default model `openai/gpt-oss-120b`, configurable via `GROQ_MODEL`) with a local rule-based fallback for reliability
 - **Ratings & Reputation** — Post-session rating system to build user credibility
 - **Notifications** — In-app notification system for matches, messages, and session requests
 - **Profile Management** — Editable profiles with avatar upload (Cloudinary-backed, persists across deploys) and real-name validation (Latin + Urdu/Arabic letters)

@@ -2,6 +2,12 @@ const axios = require('axios');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+// llama-3.3-70b-versatile was deprecated for free/developer tiers on
+// 2026-08-16 (Groq returns 404 model_not_found). openai/gpt-oss-120b is
+// Groq's recommended production replacement. Override with GROQ_MODEL.
+// Current list: https://console.groq.com/docs/models
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
+
 /**
  * Builds a compact, privacy-conscious summary of a user's skills for
  * the AI prompt — only what's needed for matching, nothing else.
@@ -74,14 +80,20 @@ Candidates: ${JSON.stringify(others)}
 Respond with ONLY a JSON array, no other text, in this exact format:
 [{"id": "candidate_id", "compatibilityScore": 85, "reason": "short one-sentence reason"}]`;
 
+    const model = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
+    // gpt-oss models reason before answering; reasoning tokens count toward
+    // the limit, so give them more room and keep reasoning effort low.
+    const isReasoningModel = model.startsWith('openai/gpt-oss');
+
     try {
         const response = await axios.post(
             GROQ_API_URL,
             {
-                model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+                model,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.3,
-                max_tokens: 1500
+                max_tokens: isReasoningModel ? 4000 : 1500,
+                ...(isReasoningModel ? { reasoning_effort: 'low' } : {})
             },
             {
                 headers: {
@@ -92,9 +104,14 @@ Respond with ONLY a JSON array, no other text, in this exact format:
             }
         );
 
-        const raw = response.data.choices[0].message.content.trim();
-        const cleaned = raw.replace(/```json|```/g, '').trim();
-        const scores = JSON.parse(cleaned);
+        const raw = (response.data.choices?.[0]?.message?.content || '').trim();
+        // Take just the JSON array, even if the model wrapped it in prose or fences.
+        const start = raw.indexOf('[');
+        const end   = raw.lastIndexOf(']');
+        if (start === -1 || end <= start) {
+            throw new Error(`Groq response contained no JSON array (model ${model})`);
+        }
+        const scores = JSON.parse(raw.slice(start, end + 1));
 
         const scoreMap = new Map(scores.map((s) => [s.id, s]));
 
@@ -110,7 +127,13 @@ Respond with ONLY a JSON array, no other text, in this exact format:
         return ranked.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 
     } catch (error) {
-        console.error('Groq AI ranking failed, using local fallback:', error.message);
+        // Log Groq's own error body (status, type, code, message) — never the
+        // request, which carries the API key.
+        const groqError = error.response?.data?.error;
+        const detail = error.response
+            ? `HTTP ${error.response.status} ${groqError?.code || groqError?.type || ''}: ${groqError?.message || JSON.stringify(error.response.data).slice(0, 300)}`
+            : error.message;
+        console.error(`Groq AI ranking failed (model ${model}), using local fallback — ${detail}`);
         return localHeuristicRank(currentUser, candidates);
     }
 };
