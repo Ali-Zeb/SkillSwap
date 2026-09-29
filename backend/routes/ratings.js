@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, userOnly } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const { LIMITS } = require('../config/constants');
 
@@ -9,6 +9,7 @@ const { submitRating, getUserRatings } = require('../controllers/ratingControlle
 router.post(
     '/',
     protect,
+    userOnly,
     validateBody({
         sessionId: { required: true, type: 'string' },
         revieweeId: { required: true, type: 'string' },

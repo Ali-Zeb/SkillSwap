@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
     selectCurrentUser,
     selectIsAuthenticated,
-    selectIsAdmin,
     logoutUser,
 } from '../../features/auth/authSlice'
 import Spinner from '../ui/Spinner'
@@ -23,8 +22,7 @@ const Navbar = function() {
     const location        = useLocation()
     const user            = useSelector(selectCurrentUser)
     const isAuthenticated = useSelector(selectIsAuthenticated)
-    const isAdmin         = useSelector(selectIsAdmin)
-    const navLinks        = isAdmin ? [...NAV_LINKS, { path: '/admin', label: 'Admin' }] : NAV_LINKS
+    const navLinks        = NAV_LINKS
     const [mobileOpen,    setMobileOpen]    = useState(false)
     const [dropdownOpen,  setDropdownOpen]  = useState(false)
     const [loggingOut,    setLoggingOut]    = useState(false)

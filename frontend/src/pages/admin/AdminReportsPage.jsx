@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../../api/axios'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Pagination from '../../components/ui/Pagination'
@@ -98,7 +97,7 @@ const AdminReportsPage = function() {
     }
 
     return (
-        <AdminLayout title="Reports" subtitle="Review user reports and take action">
+        <AdminLayout title="User Reports" subtitle="Review complaints from members and take action">
             <div className="admin-filters">
                 <select aria-label="Filter by status" value={status} onChange={function(e) { setStatus(e.target.value); setPage(1) }}>
                     <option value="">All statuses</option>
@@ -129,7 +128,7 @@ const AdminReportsPage = function() {
                                             <td data-label="Reported user">
                                                 {r.reportedUser ? (
                                                     <>
-                                                        <Link to={'/profile/' + r.reportedUser._id} style={{ fontWeight: 600, color: '#1e293b', textDecoration: 'none' }}>{r.reportedUser.fullName}</Link>
+                                                        <span style={{ fontWeight: 600, color: '#1e293b' }}>{r.reportedUser.fullName}</span>
                                                         {!r.reportedUser.isActive && <span className="admin-badge" style={{ background: '#fee2e2', color: '#991b1b', marginLeft: 6 }}>Deactivated</span>}
                                                     </>
                                                 ) : <span style={{ color: '#94a3b8' }}>Deleted user</span>}

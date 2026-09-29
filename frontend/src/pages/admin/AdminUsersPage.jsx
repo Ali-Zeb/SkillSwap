@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import api from '../../api/axios'
 import { selectCurrentUser } from '../../features/auth/authSlice'
@@ -148,7 +147,7 @@ const AdminUsersPage = function() {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0 }}>
                                                     <img src={getAvatarUrl(u.avatar, u.fullName)} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                                     <div style={{ minWidth: 0 }}>
-                                                        <Link to={'/profile/' + u._id} style={{ fontWeight: 600, color: '#1e293b', textDecoration: 'none' }}>{u.fullName}{isMe ? ' (you)' : ''}</Link>
+                                                        <span style={{ fontWeight: 600, color: '#1e293b' }}>{u.fullName}{isMe ? ' (you)' : ''}</span>
                                                         <div style={{ fontSize: '0.8125rem', color: '#64748b', overflowWrap: 'anywhere' }}>{u.email}</div>
                                                     </div>
                                                 </div>

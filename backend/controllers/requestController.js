@@ -13,6 +13,9 @@ const reputationService   = require('../services/reputationService');
  */
 const getIo = (req) => req.app.get('io') || null;
 
+// populate() match: admin accounts are never shown as request partners.
+const MEMBER_ONLY = { role: { $ne: 'admin' } };
+
 // @desc    Send a connection request to another user
 // @route   POST /api/requests/:userId
 // @access  Private
@@ -29,7 +32,8 @@ const sendRequest = asyncHandler(async (req, res) => {
     }
 
     const receiver = await User.findById(userId);
-    if (!receiver || !receiver.isActive) {
+    // Admin accounts are not members — they can't be sent requests.
+    if (!receiver || !receiver.isActive || receiver.role === 'admin') {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
@@ -188,9 +192,10 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
         receiverId: req.user.id,
         status:     REQUEST_STATUS.PENDING
     })
-        .populate('senderId', 'fullName avatar headline reputation')
+        .populate({ path: 'senderId', select: 'fullName avatar headline reputation', match: MEMBER_ONLY })
         .populate('skillId',  'name category')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .then((list) => list.filter((r) => r.senderId));   // drop admins / deleted users
 
     res.status(200).json({
         success: true,
@@ -204,9 +209,10 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
 // @access  Private
 const getSentRequests = asyncHandler(async (req, res) => {
     const requests = await Request.find({ senderId: req.user.id })
-        .populate('receiverId', 'fullName avatar headline reputation')
+        .populate({ path: 'receiverId', select: 'fullName avatar headline reputation', match: MEMBER_ONLY })
         .populate('skillId',    'name category')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .then((list) => list.filter((r) => r.receiverId));  // drop admins / deleted users
 
     res.status(200).json({
         success: true,
@@ -231,9 +237,11 @@ const getConnections = asyncHandler(async (req, res) => {
         ],
         status: REQUEST_STATUS.ACCEPTED
     })
-        .populate('senderId',   'fullName avatar headline')
-        .populate('receiverId', 'fullName avatar headline')
-        .sort({ respondedAt: -1 });
+        .populate({ path: 'senderId',   select: 'fullName avatar headline', match: MEMBER_ONLY })
+        .populate({ path: 'receiverId', select: 'fullName avatar headline', match: MEMBER_ONLY })
+        .sort({ respondedAt: -1 })
+        // Both sides must still be members (not deleted, not admin).
+        .then((list) => list.filter((r) => r.senderId && r.receiverId));
 
     // Normalise: give the caller a `partner` field that always points to
     // the other user, regardless of whether this user sent or received.

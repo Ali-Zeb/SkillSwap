@@ -28,7 +28,7 @@ const getUserBadges = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid id format' });
     }
 
-    const exists = await User.exists({ _id: userId, isActive: true });
+    const exists = await User.exists({ _id: userId, isActive: true, role: { $ne: 'admin' } });
     if (!exists) {
         return res.status(404).json({ success: false, message: 'User not found' });
     }

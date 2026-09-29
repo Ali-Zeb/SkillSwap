@@ -7,6 +7,7 @@ import AuthCard from '../../components/ui/AuthCard'
 import s from '../../components/ui/authStyles'
 import Spinner from '../../components/ui/Spinner'
 import useResendVerification from '../../hooks/useResendVerification'
+import { homePathFor } from '../../utils/roles'
 
 /**
  * Opened from the emailed link /verify-email/:token. Verifies the token,
@@ -29,7 +30,7 @@ const VerifyEmailPage = function() {
         api.post('/auth/verify-email', { token })
             .then(function({ data }) {
                 if (data.token) dispatch(setCredentials({ user: data.user, token: data.token }))
-                setState({ status: 'success', message: data.message, signedIn: !!data.token })
+                setState({ status: 'success', message: data.message, signedIn: !!data.token, home: homePathFor(data.user) })
             })
             .catch(function(err) {
                 setState({ status: 'error', message: err.response?.data?.message || 'Verification failed. Please try again.' })
@@ -49,7 +50,7 @@ const VerifyEmailPage = function() {
             <AuthCard icon="✅" title="Email verified">
                 <p style={s.text}>{state.message}</p>
                 {state.signedIn ? (
-                    <button type="button" onClick={function() { navigate('/dashboard', { replace: true }) }} style={s.button}>Go to dashboard</button>
+                    <button type="button" onClick={function() { navigate(state.home, { replace: true }) }} style={s.button}>Continue</button>
                 ) : (
                     <Link to="/login" style={{ ...s.button, display: 'block', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Log in</Link>
                 )}

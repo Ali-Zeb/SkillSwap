@@ -27,6 +27,8 @@ import AdminUsersPage       from './pages/admin/AdminUsersPage'
 import AdminReportsPage     from './pages/admin/AdminReportsPage'
 import AdminSessionsPage    from './pages/admin/AdminSessionsPage'
 import AdminAuditLogPage    from './pages/admin/AdminAuditLogPage'
+import AdminSettingsPage    from './pages/admin/AdminSettingsPage'
+import { isAdminUser, homePathFor } from './utils/roles'
 import Spinner              from './components/ui/Spinner'
 
 const NotFoundPage = function() {
@@ -39,17 +41,24 @@ const NotFoundPage = function() {
     )
 }
 
+// Member pages. Admins are operators, never members, so they are sent to
+// the admin panel (the API also rejects them on member endpoints).
 const ProtectedRoute = function({ children }) {
     const isAuthenticated = useSelector(selectIsAuthenticated)
+    const user            = useSelector(selectCurrentUser)
     const tokenInStorage  = sessionStorage.getItem('skillswap_token')
     if (!isAuthenticated && !tokenInStorage) {
         return <Navigate to="/login" replace />
+    }
+    if (isAdminUser(user)) {
+        return <Navigate to="/admin" replace />
     }
     return <Layout>{children}</Layout>
 }
 
 // Client-side gate for the admin area. The real enforcement is server-side:
-// every /api/admin route re-checks the role from the database.
+// every /api/admin route re-checks the role from the database. Admin pages
+// render their own AdminLayout (no member Navbar).
 const AdminRoute = function({ children }) {
     const isAuthenticated = useSelector(selectIsAuthenticated)
     const user            = useSelector(selectCurrentUser)
@@ -58,19 +67,20 @@ const AdminRoute = function({ children }) {
         return <Navigate to="/login" replace />
     }
     if (!user) {
-        return <Layout><div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}><Spinner size="lg" /></div></Layout>
+        return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="lg" /></div>
     }
-    if (user.role !== 'admin') {
+    if (!isAdminUser(user)) {
         return <Navigate to="/dashboard" replace />
     }
-    return <Layout>{children}</Layout>
+    return children
 }
 
 const PublicRoute = function({ children }) {
     const isAuthenticated = useSelector(selectIsAuthenticated)
+    const user            = useSelector(selectCurrentUser)
     const tokenInStorage  = sessionStorage.getItem('skillswap_token')
     if (isAuthenticated || tokenInStorage) {
-        return <Navigate to="/dashboard" replace />
+        return <Navigate to={homePathFor(user)} replace />
     }
     return children
 }
@@ -116,6 +126,7 @@ const App = function() {
             <Route path="/admin/reports"    element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
             <Route path="/admin/sessions"   element={<AdminRoute><AdminSessionsPage /></AdminRoute>} />
             <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
+            <Route path="/admin/settings"   element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
 
             <Route path="*" element={<NotFoundPage />} />
         </Routes>

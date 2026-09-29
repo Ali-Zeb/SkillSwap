@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import AdminTopBar from './AdminTopBar'
 
 const ADMIN_LINKS = [
     { to: '/admin',            label: 'Dashboard', icon: '📊', end: true },
     { to: '/admin/users',      label: 'Users',     icon: '👥' },
-    { to: '/admin/reports',    label: 'Reports',   icon: '🚩' },
+    { to: '/admin/reports',    label: 'User Reports', icon: '🚩' },
     { to: '/admin/sessions',   label: 'Sessions',  icon: '📅' },
     { to: '/admin/audit-logs', label: 'Audit Log', icon: '📜' },
+    { to: '/admin/settings',   label: 'Settings',  icon: '⚙️' },
 ]
 
 /**
- * Admin area shell: a sidebar on desktop that collapses into a toggle
- * menu on mobile. Rendered inside the main Layout, so the site navbar
- * stays available.
+ * Admin-only shell: its own top bar (no member Navbar) and a sidebar that
+ * collapses into a menu button on mobile.
  */
 const AdminLayout = function({ title, subtitle, actions, children }) {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -20,6 +21,8 @@ const AdminLayout = function({ title, subtitle, actions, children }) {
     const current  = ADMIN_LINKS.find(function(l) { return l.end ? location.pathname === l.to : location.pathname.startsWith(l.to) })
 
     return (
+        <div className="admin-root">
+        <AdminTopBar />
         <div className="admin-shell">
             <aside className="admin-sidebar" aria-label="Admin navigation">
                 <div className="admin-sidebar-head">
@@ -62,6 +65,7 @@ const AdminLayout = function({ title, subtitle, actions, children }) {
                 </div>
                 {children}
             </main>
+        </div>
         </div>
     )
 }

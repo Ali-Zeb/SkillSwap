@@ -25,6 +25,7 @@ const getPotentialMatches = asyncHandler(async (req, res) => {
     const candidates = await User.find({
         _id: { $ne: currentUser._id },
         isActive: true,
+        role: { $ne: 'admin' },   // admins are operators, never match candidates
         $or: [
             { skills: { $elemMatch: { type: 'teach', skillId: { $in: teachSkillIds } } } },
             { skills: { $elemMatch: { type: 'learn', skillId: { $in: learnSkillIds } } } }

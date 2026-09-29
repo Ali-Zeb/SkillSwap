@@ -53,7 +53,15 @@ function registerSocketHandlers(io) {
                 return
             }
             try {
-                const receiver = await User.exists({ _id: receiverId, isActive: true })
+                // Admins neither send nor receive member messages.
+                const [sender, receiver] = await Promise.all([
+                    User.exists({ _id: socket.userId, role: { $ne: 'admin' } }),
+                    User.exists({ _id: receiverId, isActive: true, role: { $ne: 'admin' } })
+                ])
+                if (!sender) {
+                    socket.emit('message-error', { message: 'Admin accounts cannot send member messages' })
+                    return
+                }
                 if (!receiver) {
                     socket.emit('message-error', { message: 'This user is not available' })
                     return

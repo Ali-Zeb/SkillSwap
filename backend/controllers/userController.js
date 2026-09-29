@@ -3,6 +3,10 @@ const Skill              = require('../models/Skill');
 const asyncHandler       = require('../utils/asyncHandler');
 const userMetricsService = require('../services/userMetricsService');
 const reputationService  = require('../services/reputationService');
+const emailService       = require('../services/emailService');
+const emailTemplates     = require('../utils/emailTemplates');
+const generateToken      = require('../utils/generateToken');
+const { clientUrl }      = require('../utils/authTokens');
 const { normalizeName, getFullNameError } = require('../utils/nameValidation');
 
 // @desc    Get the current user's full profile
@@ -26,15 +30,16 @@ const PUBLIC_PROFILE_FIELDS = [
 
 const getPublicProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id)
-        .select(`${PUBLIC_PROFILE_FIELDS} isActive`)
+        .select(`${PUBLIC_PROFILE_FIELDS} isActive role`)
         .populate('skills.skillId', 'name category');
 
-    if (!user || !user.isActive) {
+    // Admin accounts are operators, not members, and have no public profile.
+    if (!user || !user.isActive || user.role === 'admin') {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // isActive was selected only for the check above — strip it.
-    const { isActive, ...publicUser } = user.toJSON();
+    // isActive/role were selected only for the check above — strip them.
+    const { isActive, role, ...publicUser } = user.toJSON();
     res.status(200).json({ success: true, user: publicUser });
 });
 
@@ -100,6 +105,43 @@ const updateAvatar = asyncHandler(async (req, res) => {
         success: true,
         message: 'Avatar updated successfully',
         user
+    });
+});
+
+// @desc    Change the current user's password (requires the current one)
+// @route   PUT /api/users/password
+// @access  Private
+const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!(await user.comparePassword(currentPassword))) {
+        return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+    if (currentPassword === newPassword) {
+        return res.status(400).json({ success: false, message: 'The new password must be different from the current one' });
+    }
+
+    user.password          = newPassword;   // hashed by the pre-save hook
+    user.passwordChangedAt = new Date();    // revokes every token issued before now
+    await user.save({ validateModifiedOnly: true });
+
+    // Other devices' open sockets were authenticated with revoked tokens.
+    const io = req.app.get('io');
+    if (io) io.in(`user_${user._id}`).disconnectSockets(true);
+
+    emailService
+        .sendEmail({
+            to: { email: user.email, name: user.fullName },
+            ...emailTemplates.passwordChanged({ name: user.fullName, loginUrl: `${clientUrl()}/login` })
+        })
+        .catch((error) => console.error('Password changed email failed:', error.message));
+
+    // A fresh token keeps this browser signed in; all others are signed out.
+    res.status(200).json({
+        success: true,
+        message: 'Password updated. You have been signed out on your other devices.',
+        token:   generateToken(user._id)
     });
 });
 
@@ -205,6 +247,7 @@ const removeUserSkill = asyncHandler(async (req, res) => {
 
 module.exports = {
     getMyProfile,
+    changePassword,
     getPublicProfile,
     updateProfile,
     updateAvatar,

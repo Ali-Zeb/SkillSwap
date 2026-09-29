@@ -6,12 +6,14 @@ import {
     clearError,
     selectAuthLoading,
     selectAuthError,
+    selectCurrentUser,
     selectAuthErrorCode,
     selectAuthErrorEmail,
     selectIsAuthenticated,
 } from '../../features/auth/authSlice'
 import Spinner from '../../components/ui/Spinner'
 import useResendVerification from '../../hooks/useResendVerification'
+import { homePathFor } from '../../utils/roles'
 
 const FEATURES = [
     'Access your matches',
@@ -37,9 +39,10 @@ const LoginPage = function() {
     const [password, setPassword] = useState('')
     const [errors,   setErrors]   = useState({})
 
+    const currentUser = useSelector(selectCurrentUser)
     useEffect(function() {
-        if (isAuthenticated) navigate('/dashboard', { replace: true })
-    }, [isAuthenticated, navigate])
+        if (isAuthenticated) navigate(homePathFor(currentUser), { replace: true })
+    }, [isAuthenticated, currentUser, navigate])
 
     useEffect(function() {
         dispatch(clearError())
@@ -62,7 +65,8 @@ const LoginPage = function() {
         setErrors({})
         const result = await dispatch(loginUser({ email, password }))
         if (loginUser.fulfilled.match(result)) {
-            navigate('/dashboard', { replace: true })
+            // Admins go straight to the admin panel; members to their dashboard.
+            navigate(homePathFor(result.payload.user), { replace: true })
         }
     }
 

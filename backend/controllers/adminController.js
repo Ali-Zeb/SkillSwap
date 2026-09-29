@@ -47,15 +47,17 @@ const countsByKey = (rows, keys) => {
 // ---------------------------------------------------------------------------
 const getStats = asyncHandler(async (req, res) => {
     const now = Date.now();
+    // User numbers count members only; admins are reported separately.
+    const MEMBERS = { role: { $ne: 'admin' } };
     const [
         totalUsers, activeUsers, admins, newUsers7d, newUsers30d,
         sessionRows, reportRows, ratingRows
     ] = await Promise.all([
-        User.countDocuments({}),
-        User.countDocuments({ isActive: true }),
+        User.countDocuments(MEMBERS),
+        User.countDocuments({ ...MEMBERS, isActive: true }),
         User.countDocuments({ role: 'admin' }),
-        User.countDocuments({ createdAt: { $gte: new Date(now - 7 * DAY_MS) } }),
-        User.countDocuments({ createdAt: { $gte: new Date(now - 30 * DAY_MS) } }),
+        User.countDocuments({ ...MEMBERS, createdAt: { $gte: new Date(now - 7 * DAY_MS) } }),
+        User.countDocuments({ ...MEMBERS, createdAt: { $gte: new Date(now - 30 * DAY_MS) } }),
         Session.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
         Report.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
         Rating.aggregate([{ $group: { _id: null, count: { $sum: 1 }, average: { $avg: '$rating' } } }])

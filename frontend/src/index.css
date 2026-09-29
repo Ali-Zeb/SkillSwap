@@ -1848,3 +1848,20 @@ input, textarea, select {
   .admin-table td { border: none; padding: 0.25rem 1rem; }
   .admin-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
 }
+
+/* ── Admin top bar (admin-only; replaces the member navbar in /admin) ───── */
+.admin-root { min-height: 100vh; background: var(--background); }
+.admin-topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  height: 60px; padding: 0 1.25rem; box-sizing: border-box;
+  background: white; border-bottom: 1px solid #e2e8f0;
+}
+.admin-root .admin-shell { min-height: calc(100vh - 60px); }
+.admin-root .admin-sidebar { top: calc(60px + 1.5rem); }
+@media (max-width: 860px) {
+  .admin-topbar { padding: 0 16px; }
+}
+@media (max-width: 480px) {
+  .admin-topbar-name { display: none; }
+}

@@ -8,6 +8,10 @@ const { isTokenIssuedBefore } = require('../utils/generateToken');
  * invalid, expired, or belongs to a deactivated/deleted account.
  */
 const protect = async (req, res, next) => {
+    // Already authenticated earlier in this request (e.g. protect applied
+    // at mount level and again on the route) — skip the second DB lookup.
+    if (req.user) return next();
+
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -100,4 +104,20 @@ const authorize = (...roles) => {
     };
 };
 
-module.exports = { protect, authorize };
+/**
+ * Blocks admin accounts from user-side features (matching, requests,
+ * sessions, messages, ratings, reports, badges). Admins are platform
+ * operators only, never participants. Must run after `protect`.
+ */
+const userOnly = (req, res, next) => {
+    if (req.user?.role === 'admin') {
+        return res.status(403).json({
+            success: false,
+            code:    'ADMIN_NOT_ALLOWED',
+            message: 'Admin accounts cannot use member features. Use the admin panel instead.'
+        });
+    }
+    next();
+};
+
+module.exports = { protect, authorize, userOnly };

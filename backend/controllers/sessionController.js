@@ -1,4 +1,6 @@
+const mongoose            = require('mongoose');
 const Session             = require('../models/Session');
+const User                = require('../models/User');
 const { SESSION_STATUS }  = require('../config/constants');
 const asyncHandler        = require('../utils/asyncHandler');
 const notificationService = require('../services/notificationService');
@@ -57,6 +59,14 @@ const createSession = asyncHandler(async (req, res) => {
             success: false,
             message: 'You can only create sessions you are part of'
         });
+    }
+
+    // The partner must be an existing, active member (never an admin).
+    const partnerUserId = req.user.id === teacherId ? learnerId : teacherId;
+    const partnerIsMember = mongoose.Types.ObjectId.isValid(partnerUserId) &&
+        await User.exists({ _id: partnerUserId, isActive: true, role: { $ne: 'admin' } });
+    if (!partnerIsMember || partnerUserId === req.user.id) {
+        return res.status(400).json({ success: false, message: 'Choose a valid partner for this session' });
     }
 
     const session = await Session.create({

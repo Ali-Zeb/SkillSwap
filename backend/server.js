@@ -15,6 +15,7 @@ const connectDB                  = require('./config/db');
 const registerSocketHandlers     = require('./socket');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { generalLimiter }         = require('./middleware/rateLimiter');
+const { protect, userOnly }      = require('./middleware/auth');
 
 // Route modules
 const authRoutes         = require('./routes/auth');
@@ -107,15 +108,17 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth',          authRoutes);
 app.use('/api/users',         userRoutes);
 app.use('/api/skills',        skillRoutes);
-app.use('/api/matches',       matchRoutes);
-app.use('/api/requests',      requestRoutes);
-app.use('/api/sessions',      sessionRoutes);
-app.use('/api/messages',      messageRoutes);
+// Member-only features: admins are operators, never participants.
+const memberOnly = [protect, userOnly];
+app.use('/api/matches',       ...memberOnly, matchRoutes);
+app.use('/api/requests',      ...memberOnly, requestRoutes);
+app.use('/api/sessions',      ...memberOnly, sessionRoutes);
+app.use('/api/messages',      ...memberOnly, messageRoutes);
 app.use('/api/ratings',       ratingRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/reports',       reportRoutes);
+app.use('/api/reports',       ...memberOnly, reportRoutes);
 app.use('/api/admin',         adminRoutes);
-app.use('/api/badges',        badgeRoutes);
+app.use('/api/badges',        ...memberOnly, badgeRoutes);
 
 // Socket.io
 registerSocketHandlers(io);

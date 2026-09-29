@@ -102,10 +102,13 @@ const getConversationsList = asyncHandler(async (req, res) => {
         { $sort: { 'lastMessage.createdAt': -1 } }
     ]);
 
-    const populated = await User.populate(conversations, {
+    const populated = (await User.populate(conversations, {
         path: '_id',
-        select: 'fullName avatar headline lastActive'
-    });
+        select: 'fullName avatar headline lastActive role'
+    }))
+        // Deleted users (null) and admin accounts never appear as contacts.
+        .filter((c) => c._id && c._id.role !== 'admin')
+        .map((c) => { c._id.role = undefined; return c; });
 
     res.status(200).json({
         success: true,

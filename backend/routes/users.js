@@ -13,6 +13,7 @@ const {
     updateProfile,
     updateAvatar,
     updateAvailability,
+    changePassword,
     addUserSkill,
     removeUserSkill
 } = require('../controllers/userController');
@@ -32,6 +33,16 @@ router.put(
         location: { type: 'string', max: 100 }
     }),
     updateProfile
+);
+
+router.put(
+    '/password',
+    protect,
+    validateBody({
+        currentPassword: { required: true, type: 'string' },
+        newPassword:     { required: true, type: 'string', min: LIMITS.PASSWORD_MIN }
+    }),
+    changePassword
 );
 
 router.put(
