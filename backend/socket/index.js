@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const Message  = require('../models/Message')
 const Session  = require('../models/Session')
 const User     = require('../models/User')
+const { isTokenIssuedBefore } = require('../utils/generateToken')
 
 /**
  * Verifies the JWT sent during the socket handshake.
@@ -15,7 +16,7 @@ const authenticateSocket = async (socket, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
         const user    = await User.findById(decoded.id).select('_id isActive fullName passwordChangedAt')
         if (!user || !user.isActive) return next(new Error('Invalid or inactive account'))
-        if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+        if (isTokenIssuedBefore(decoded, user.passwordChangedAt)) {
             return next(new Error('Session expired, please log in again'))
         }
         socket.userId   = user._id.toString()

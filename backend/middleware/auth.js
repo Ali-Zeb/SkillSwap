@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isTokenIssuedBefore } = require('../utils/generateToken');
 
 /**
  * Verifies the Bearer JWT on the request, attaches the authenticated
@@ -40,7 +41,7 @@ const protect = async (req, res, next) => {
         }
 
         // A password reset revokes every JWT issued before it.
-        if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+        if (isTokenIssuedBefore(decoded, user.passwordChangedAt)) {
             return res.status(401).json({
                 success: false,
                 code:    'TOKEN_REVOKED',

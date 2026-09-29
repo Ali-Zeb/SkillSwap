@@ -225,9 +225,9 @@ const resetPassword = asyncHandler(async (req, res) => {
     user.password             = req.body.password;   // hashed by the pre-save hook
     user.passwordResetToken   = undefined;           // single use
     user.passwordResetExpires = undefined;
-    // 1s back-dated: JWT `iat` has second precision, so a login right after
-    // the reset must not be treated as "issued before the change".
-    user.passwordChangedAt    = new Date(Date.now() - 1000);
+    // Every JWT issued before this instant is rejected (compared with the
+    // millisecond `iatMs` claim — see utils/generateToken.js).
+    user.passwordChangedAt    = new Date();
     // Receiving the reset link proves the user owns the inbox.
     if (user.isEmailVerified === false) user.isEmailVerified = true;
     await user.save({ validateModifiedOnly: true });
