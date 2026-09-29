@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Flag, CalendarDays, ScrollText, Settings, X, LifeBuoy } from 'lucide-react'
+import { LayoutDashboard, Users, Flag, CalendarDays, ScrollText, Settings, X, LifeBuoy, BarChart3 } from 'lucide-react'
 import api from '../../api/axios'
 import AdminTopBar from './AdminTopBar'
 
 const ADMIN_LINKS = [
     { to: '/admin',            label: 'Dashboard',    Icon: LayoutDashboard, end: true },
+    { to: '/admin/analytics',  label: 'Analytics',    Icon: BarChart3 },
     { to: '/admin/users',      label: 'Users',        Icon: Users },
     { to: '/admin/reports',    label: 'User Reports', Icon: Flag },
     { to: '/admin/support',    label: 'Support',      Icon: LifeBuoy, badgeKey: 'support' },

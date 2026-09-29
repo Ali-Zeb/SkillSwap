@@ -179,6 +179,9 @@ const UserSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Admin analytics / stats: members vs admins, new sign-ups by date.
+UserSchema.index({ role: 1, createdAt: -1 });
+
 // Hash the password before saving, only when it has changed.
 UserSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {

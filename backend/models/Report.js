@@ -62,6 +62,8 @@ ReportSchema.index({ status: 1, createdAt: -1 });
 ReportSchema.index({ reportedUser: 1, createdAt: -1 });
 // "My reports" view.
 ReportSchema.index({ reporter: 1, createdAt: -1 });
+// Admin analytics: complaints received per day.
+ReportSchema.index({ createdAt: -1 });
 // At most one pending report per reporter + target; also closes the race
 // between the controller's duplicate check and the insert.
 ReportSchema.index(

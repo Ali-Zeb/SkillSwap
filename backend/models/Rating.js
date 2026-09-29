@@ -37,5 +37,6 @@ const RatingSchema = new mongoose.Schema({
 // the other person's reputation.
 RatingSchema.index({ sessionId: 1, reviewerId: 1 }, { unique: true });
 RatingSchema.index({ revieweeId: 1 });
+RatingSchema.index({ createdAt: -1 });   // admin analytics by date range
 
 module.exports = mongoose.model('Rating', RatingSchema);

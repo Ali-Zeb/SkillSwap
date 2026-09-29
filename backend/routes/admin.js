@@ -7,6 +7,9 @@ const { LIMITS, USER_ROLES, REPORT_STATUS, SUPPORT_STATUS, SUPPORT_PRIORITY } = 
 const {
     listTickets, awaitingCount, getTicket, replyToTicket, updateTicket
 } = require('../controllers/adminSupportController');
+const {
+    getPlatformReport, exportPlatformReport, getUserReport, exportUserReport, exportUsers
+} = require('../controllers/analyticsController');
 
 const {
     getStats,
@@ -26,6 +29,13 @@ router.use(protect, authorize('admin'));
 router.get('/stats', getStats);
 
 router.get('/users', getUsers);
+router.get('/users/export', exportUsers);   // before /users/:id routes
+
+// Analytics
+router.get('/analytics/platform',          getPlatformReport);
+router.get('/analytics/platform/export',   exportPlatformReport);
+router.get('/analytics/users/:id',         getUserReport);
+router.get('/analytics/users/:id/export',  exportUserReport);
 router.patch(
     '/users/:id/status',
     validateBody({

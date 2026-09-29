@@ -6,7 +6,9 @@ import AdminLayout from '../../components/layout/AdminLayout'
 import Pagination from '../../components/ui/Pagination'
 import Spinner from '../../components/ui/Spinner'
 import useAdminList from '../../hooks/useAdminList'
-import { UserX, UserCheck, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { UserX, UserCheck, ShieldCheck, ShieldOff, FileText, Download } from 'lucide-react'
+import { downloadFile } from '../../utils/download'
 import { getAvatarUrl } from '../../utils/helpers'
 
 // "Sep 29, 2026" — keeps the Joined column on one line.
@@ -53,6 +55,16 @@ const AdminUsersPage = function() {
     const [actionError, setActionError] = useState(null)
     const [dialogUser,  setDialogUser]  = useState(null)
     const [dialogError, setDialogError] = useState(null)
+    const [exporting,   setExporting]   = useState(false)
+
+    // Exports the list with the current filters (server-generated, audit-logged).
+    const exportCsv = async function() {
+        setExporting(true)
+        setActionError(null)
+        try { await downloadFile('/admin/users/export', { search, role, status }, 'skillswap-users.csv') }
+        catch (err) { setActionError(err.message) }
+        finally { setExporting(false) }
+    }
 
     // Debounce the search box so typing doesn't fire a request per keystroke.
     useEffect(function() {
@@ -112,7 +124,8 @@ const AdminUsersPage = function() {
     }
 
     return (
-        <AdminLayout title="Users" subtitle="Search accounts, manage roles and access">
+        <AdminLayout title="Users" subtitle="Search accounts, manage roles and access"
+            actions={<button type="button" className="admin-btn" disabled={exporting} onClick={exportCsv}><Download size={15} aria-hidden="true" /> {exporting ? 'Exporting...' : 'Export CSV'}</button>}>
             <div className="admin-filters">
                 <input type="search" placeholder="Search name or email" aria-label="Search users" value={searchInput} maxLength={100}
                     onChange={function(e) { setSearchInput(e.target.value) }} />
@@ -187,6 +200,11 @@ const AdminUsersPage = function() {
                                                             <button type="button" className="admin-btn admin-btn--sm admin-btn--success" disabled={busy} onClick={function() { activate(u) }}>
                                                                 <UserCheck size={14} aria-hidden="true" /> Reactivate
                                                             </button>
+                                                        )}
+                                                        {u.role !== 'admin' && (
+                                                            <Link to={'/admin/users/' + u._id + '/report'} className="admin-btn admin-btn--sm">
+                                                                <FileText size={14} aria-hidden="true" /> View report
+                                                            </Link>
                                                         )}
                                                         <button type="button" className="admin-btn admin-btn--sm" disabled={busy} onClick={function() { changeRole(u) }}>
                                                             {u.role === 'admin'

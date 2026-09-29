@@ -157,7 +157,7 @@ const AccountMenu = function() {
 }
 
 const SECTION_NAMES = [
-    ['/admin/users', 'Users'], ['/admin/reports', 'User Reports'], ['/admin/support', 'Support'], ['/admin/sessions', 'Sessions'],
+    ['/admin/analytics', 'Analytics'], ['/admin/users', 'Users'], ['/admin/reports', 'User Reports'], ['/admin/support', 'Support'], ['/admin/sessions', 'Sessions'],
     ['/admin/audit-logs', 'Audit Log'], ['/admin/settings', 'Settings'], ['/admin', 'Dashboard'],
 ]
 

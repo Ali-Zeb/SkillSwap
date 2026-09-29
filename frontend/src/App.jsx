@@ -29,6 +29,8 @@ import AdminSessionsPage    from './pages/admin/AdminSessionsPage'
 import AdminAuditLogPage    from './pages/admin/AdminAuditLogPage'
 import AdminSettingsPage    from './pages/admin/AdminSettingsPage'
 import AdminSupportPage     from './pages/admin/AdminSupportPage'
+import AdminAnalyticsPage   from './pages/admin/AdminAnalyticsPage'
+import AdminUserReportPage  from './pages/admin/AdminUserReportPage'
 import AdminSupportTicketPage from './pages/admin/AdminSupportTicketPage'
 import SupportPage          from './pages/SupportPage'
 import AboutPage            from './pages/public/AboutPage'
@@ -142,6 +144,8 @@ const App = function() {
             <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
             <Route path="/admin/settings"   element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
             <Route path="/admin/support"     element={<AdminRoute><AdminSupportPage /></AdminRoute>} />
+            <Route path="/admin/analytics"   element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
+            <Route path="/admin/users/:id/report" element={<AdminRoute><AdminUserReportPage /></AdminRoute>} />
             <Route path="/admin/support/:id" element={<AdminRoute><AdminSupportTicketPage /></AdminRoute>} />
 
             <Route path="*" element={<NotFoundPage />} />

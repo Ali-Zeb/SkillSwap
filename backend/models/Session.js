@@ -81,6 +81,9 @@ const SessionSchema = new mongoose.Schema({
 
 SessionSchema.index({ teacherId: 1, date: 1 });
 SessionSchema.index({ learnerId: 1, date: 1 });
+// Admin analytics: sessions created per day, outcomes by scheduled date.
+SessionSchema.index({ createdAt: -1 });
+SessionSchema.index({ status: 1, date: 1 });
 
 /**
  * Checks whether a given userId is a participant (teacher or learner) in

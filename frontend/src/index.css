@@ -2075,3 +2075,43 @@ input, textarea, select {
 .admin-btn--success { border-color: #bbf7d0; color: #15803d; }
 .admin-btn--success:hover:not(:disabled) { background: #f0fdf4; border-color: #86efac; }
 .admin-btn svg { flex-shrink: 0; }
+
+/* ── Admin analytics ────────────────────────────────────────────────────── */
+.admin-range-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.admin-segmented { display: inline-flex; background: #eef2f7; border-radius: 10px; padding: 3px; gap: 2px; }
+.admin-segmented button {
+  border: none; background: transparent; padding: 0.4375rem 0.875rem; border-radius: 8px;
+  font-size: 0.8125rem; font-weight: 500; color: #475569; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.admin-segmented button.is-active { background: white; color: #0f172a; box-shadow: 0 1px 3px rgba(15,23,42,0.12); }
+.admin-analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; align-items: start; }
+.print-only { display: none; }
+
+/* ── Print / "Save as PDF" for admin reports ────────────────────────────── */
+@media print {
+  @page { margin: 14mm; }
+  body, .admin-root { background: white !important; }
+  .admin-sidebar, .admin-topbar, .admin-backdrop, .no-print, .admin-page-head { display: none !important; }
+  .admin-body { margin: 0 !important; }
+  .admin-main { padding: 0 !important; max-width: none; }
+  .print-only { display: block; }
+  .print-header { border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px; }
+  .print-header h1 { font-size: 20px; margin: 8px 0 2px; color: #0f172a; }
+  .print-header p { margin: 0; font-size: 12px; color: #475569; }
+  .print-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; color: #0f172a; }
+  .print-brand-mark {
+    width: 24px; height: 24px; border-radius: 6px; background: #2563eb; color: white;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .admin-card, .trend-chart { box-shadow: none !important; break-inside: avoid; }
+  .admin-stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
+  .admin-analytics-grid { grid-template-columns: 1fr 1fr !important; }
+  .admin-table thead { display: table-header-group !important; }
+  .admin-table, .admin-table tbody { display: table !important; width: 100%; }
+  .admin-table tbody { display: table-row-group !important; }
+  .admin-table tr { display: table-row !important; break-inside: avoid; }
+  .admin-table td, .admin-table th { display: table-cell !important; padding: 6px 8px !important; font-size: 11px; }
+  .admin-table td[data-label]::before { content: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
