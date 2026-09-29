@@ -68,11 +68,25 @@ const listTickets = asyncHandler(async (req, res) => {
     const pg = getPagination(req.query);
     const [items, total] = await Promise.all([
         SupportTicket.find(filter)
-            .select('name email category subject status priority awaitingAdmin assignedTo source createdAt updatedAt')
+            // Only the latest message, for a preview line in the inbox.
+            .select({
+                name: 1, email: 1, category: 1, subject: 1, status: 1, priority: 1, awaitingAdmin: 1,
+                assignedTo: 1, source: 1, createdAt: 1, updatedAt: 1, messages: { $slice: -1 }
+            })
             .populate('assignedTo', 'fullName')
             .sort({ awaitingAdmin: -1, updatedAt: -1 })
             .skip(pg.skip)
-            .limit(pg.limit),
+            .limit(pg.limit)
+            .lean()
+            .then((list) => list.map(({ messages, ...t }) => {
+                const last = messages?.[0];
+                return {
+                    ...t,
+                    lastMessage: last
+                        ? { sender: last.sender, body: last.body.length > 160 ? last.body.slice(0, 159) + '…' : last.body, createdAt: last.createdAt }
+                        : null
+                };
+            })),
         SupportTicket.countDocuments(filter)
     ]);
 

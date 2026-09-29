@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { MessageSquareReply } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Pagination from '../../components/ui/Pagination'
 import Spinner from '../../components/ui/Spinner'
@@ -8,6 +9,7 @@ import { formatDateTime } from '../../utils/helpers'
 import { SUPPORT_CATEGORIES, SUPPORT_STATUS, SUPPORT_PRIORITY, categoryLabel } from '../../utils/supportOptions'
 
 const AdminSupportPage = function() {
+    const navigate = useNavigate()
     const [searchInput, setSearchInput] = useState('')
     const [search,   setSearch]   = useState('')
     const [status,   setStatus]   = useState('active')
@@ -56,7 +58,7 @@ const AdminSupportPage = function() {
                     <div className="admin-table-wrap">
                         <table className="admin-table">
                             <thead>
-                                <tr><th>Subject</th><th>From</th><th>Category</th><th>Priority</th><th>Status</th><th>Updated</th></tr>
+                                <tr><th>Request</th><th>From</th><th>Category</th><th>Priority</th><th>Status</th><th>Updated</th><th></th></tr>
                             </thead>
                             <tbody>
                                 {tickets.map(function(t) {
@@ -64,10 +66,19 @@ const AdminSupportPage = function() {
                                     const p = SUPPORT_PRIORITY[t.priority] || SUPPORT_PRIORITY.normal
                                     const waiting = t.awaitingAdmin && t.status !== 'closed'
                                     return (
-                                        <tr key={t._id}>
-                                            <td data-label="Subject">
-                                                <Link to={'/admin/support/' + t._id} style={{ fontWeight: 600, color: '#0f172a', textDecoration: 'none', overflowWrap: 'anywhere' }}>{t.subject}</Link>
+                                        // Whole row opens the ticket; the button below is the obvious way in.
+                                        <tr key={t._id} className="admin-row-link" onClick={function() { navigate('/admin/support/' + t._id) }}>
+                                            <td data-label="Request" style={{ maxWidth: 360 }}>
+                                                <Link to={'/admin/support/' + t._id} onClick={function(e) { e.stopPropagation() }} style={{ fontWeight: 600, color: '#0f172a', textDecoration: 'none', overflowWrap: 'anywhere' }}>{t.subject}</Link>
                                                 {waiting && <span className="admin-badge" style={{ background: '#2563eb', color: 'white', marginLeft: 8 }}>Needs reply</span>}
+                                                {t.lastMessage && (
+                                                    <p className="admin-ticket-preview">
+                                                        <span style={{ fontWeight: 600, color: t.lastMessage.sender === 'admin' ? '#1d4ed8' : '#475569' }}>
+                                                            {t.lastMessage.sender === 'admin' ? 'You: ' : t.name.split(' ')[0] + ': '}
+                                                        </span>
+                                                        {t.lastMessage.body}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td data-label="From">
                                                 <div>{t.name}</div>
@@ -77,6 +88,12 @@ const AdminSupportPage = function() {
                                             <td data-label="Priority"><span className="admin-badge" style={{ background: p.bg, color: p.color }}>{p.label}</span></td>
                                             <td data-label="Status"><span className="admin-badge" style={{ background: s.bg, color: s.color }}>{s.label}</span></td>
                                             <td data-label="Updated" style={{ whiteSpace: 'nowrap' }}>{formatDateTime(t.updatedAt)}</td>
+                                            <td data-label="Action" style={{ whiteSpace: 'nowrap' }}>
+                                                <Link to={'/admin/support/' + t._id} onClick={function(e) { e.stopPropagation() }}
+                                                    className={'admin-btn admin-btn--sm' + (waiting ? ' admin-btn--primary' : '')}>
+                                                    <MessageSquareReply size={14} aria-hidden="true" /> {waiting ? 'Open & reply' : 'Open'}
+                                                </Link>
+                                            </td>
                                         </tr>
                                     )
                                 })}
