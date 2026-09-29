@@ -2,6 +2,7 @@ const Session             = require('../models/Session');
 const { SESSION_STATUS }  = require('../config/constants');
 const asyncHandler        = require('../utils/asyncHandler');
 const notificationService = require('../services/notificationService');
+const reputationService   = require('../services/reputationService');
 
 /**
  * Returns the Socket.io instance registered on the Express app.
@@ -13,25 +14,24 @@ const notificationService = require('../services/notificationService');
 const getIo = (req) => req.app.get('io') || null;
 
 /**
- * Resolves the partner's _id from a populated session document.
- * Works for both teacher and learner sides.
+ * Returns the _id of a populated ref, or null when populate() found no
+ * document (the referenced user/skill was deleted).
+ */
+const refId = (ref) => (ref ? ref._id || ref : null);
+
+/**
+ * Resolves the partner (the other participant) from a populated session.
+ * Returns null when the partner's account has been deleted, so callers
+ * can skip notifications instead of crashing.
  *
  * @param {Session} session   Populated session with teacherId/learnerId as objects
  * @param {string}  userId    The current user's id string
- * @returns {ObjectId}        The other participant's _id
+ * @returns {object|null}     The partner's populated user document
  */
-const getPartnerId = (session, userId) =>
-    session.teacherId._id.toString() === userId
-        ? session.learnerId._id
-        : session.teacherId._id;
+const getPartner = (session, userId) =>
+    String(refId(session.teacherId)) === userId ? session.learnerId : session.teacherId;
 
-/**
- * Resolves the partner's fullName from a populated session document.
- */
-const getPartnerName = (session, userId) =>
-    session.teacherId._id.toString() === userId
-        ? session.learnerId.fullName
-        : session.teacherId.fullName;
+const getPartnerId = (session, userId) => refId(getPartner(session, userId));
 
 // ---------------------------------------------------------------------------
 // @desc    Create a new session proposal (starts as pending_approval)
@@ -81,9 +81,11 @@ const createSession = asyncHandler(async (req, res) => {
 
     const partnerId = getPartnerId(session, req.user.id);
 
-    notificationService
-        .sessionProposed(partnerId, req.user.fullName, session._id, session.title, session.date, getIo(req))
-        .catch((err) => console.error('sessionProposed notification failed:', err.message));
+    if (partnerId) {
+        notificationService
+            .sessionProposed(partnerId, req.user.fullName, session._id, session.title, session.date, getIo(req))
+            .catch((err) => console.error('sessionProposed notification failed:', err.message));
+    }
 
     res.status(201).json({
         success: true,
@@ -238,9 +240,11 @@ const rescheduleSession = asyncHandler(async (req, res) => {
 
     const partnerId = getPartnerId(session, req.user.id);
 
-    notificationService
-        .sessionProposed(partnerId, req.user.fullName, session._id, session.title, session.date, getIo(req))
-        .catch((err) => console.error('reschedule notification failed:', err.message));
+    if (partnerId) {
+        notificationService
+            .sessionProposed(partnerId, req.user.fullName, session._id, session.title, session.date, getIo(req))
+            .catch((err) => console.error('reschedule notification failed:', err.message));
+    }
 
     res.status(200).json({
         success: true,
@@ -266,11 +270,16 @@ const getUpcomingSessions = asyncHandler(async (req, res) => {
             {
                 // Include pending_approval so the invitee sees proposals
                 // awaiting their response alongside confirmed sessions.
+                // Every status except completed/cancelled is listed here, so
+                // together with getPastSessions (completed, cancelled, or
+                // date < now) each session lands in exactly one tab.
+                // `rescheduled` is only set by legacy documents.
                 status: {
                     $in: [
                         SESSION_STATUS.PENDING_APPROVAL,
                         SESSION_STATUS.SCHEDULED,
-                        SESSION_STATUS.CONFIRMED
+                        SESSION_STATUS.CONFIRMED,
+                        SESSION_STATUS.RESCHEDULED
                     ]
                 }
             },
@@ -365,17 +374,22 @@ const updateSession = asyncHandler(async (req, res) => {
         return res.status(403).json({ success: false, message: 'Not authorized to modify this session' });
     }
 
-    const allowedUpdates = ['title', 'description', 'date', 'duration', 'sessionType', 'meetingLink', 'location'];
+    // Changing the time must go through the reschedule flow so the partner
+    // has to approve it; a plain edit would bypass that confirmation.
+    if (req.body.date !== undefined) {
+        return res.status(400).json({
+            success: false,
+            message: 'To change the date, use PUT /api/sessions/:id/reschedule so your partner can confirm the new time'
+        });
+    }
+
+    const allowedUpdates = ['title', 'description', 'duration', 'sessionType', 'meetingLink', 'location'];
 
     allowedUpdates.forEach((field) => {
         if (req.body[field] !== undefined) {
             session[field] = req.body[field];
         }
     });
-
-    if (req.body.date) {
-        session.status = SESSION_STATUS.RESCHEDULED;
-    }
 
     await session.save();
 
@@ -419,9 +433,11 @@ const cancelSession = asyncHandler(async (req, res) => {
 
     const partnerId = getPartnerId(session, req.user.id);
 
-    notificationService
-        .sessionCancelled(partnerId, req.user.fullName, session._id, session.title, getIo(req))
-        .catch((err) => console.error('sessionCancelled notification failed:', err.message));
+    if (partnerId) {
+        notificationService
+            .sessionCancelled(partnerId, req.user.fullName, session._id, session.title, getIo(req))
+            .catch((err) => console.error('sessionCancelled notification failed:', err.message));
+    }
 
     res.status(200).json({
         success: true,
@@ -449,32 +465,59 @@ const completeSession = asyncHandler(async (req, res) => {
         return res.status(403).json({ success: false, message: 'Not authorized to complete this session' });
     }
 
-    if (session.status === SESSION_STATUS.CANCELLED) {
-        return res.status(400).json({ success: false, message: 'Cannot complete a cancelled session' });
+    const completable = [SESSION_STATUS.SCHEDULED, SESSION_STATUS.CONFIRMED];
+    if (!completable.includes(session.status)) {
+        return res.status(400).json({
+            success: false,
+            message: session.status === SESSION_STATUS.COMPLETED
+                ? 'Session is already completed'
+                : `Only scheduled or confirmed sessions can be completed — current status is "${session.status}"`
+        });
     }
 
-    if (session.status === SESSION_STATUS.COMPLETED) {
-        return res.status(400).json({ success: false, message: 'Session is already completed' });
+    if (session.date > new Date()) {
+        return res.status(400).json({ success: false, message: 'A session can only be completed after its start time' });
     }
 
-    session.status = SESSION_STATUS.COMPLETED;
-    await session.save();
+    // Atomic transition: if two requests race, only one flips the status, so
+    // notifications and the badge pipeline run exactly once.
+    const updated = await Session.findOneAndUpdate(
+        { _id: session._id, status: { $in: completable } },
+        { $set: { status: SESSION_STATUS.COMPLETED } },
+        { new: true }
+    );
+    if (!updated) {
+        return res.status(409).json({ success: false, message: 'Session is already completed' });
+    }
+    session.status = updated.status;
 
     const io          = getIo(req);
-    const teacherId   = session.teacherId._id;
-    const learnerId   = session.learnerId._id;
-    const teacherName = session.teacherId.fullName;
-    const learnerName = session.learnerId.fullName;
+    // Either participant may have been deleted (populate → null); only
+    // notify the ones that still exist.
+    const teacher = session.teacherId;
+    const learner = session.learnerId;
 
     // Notify both participants to rate each other.
     // Failures are isolated — one failed notification does not affect the other.
-    notificationService
-        .sessionCompleted(teacherId, learnerName, session._id, session.title, io)
-        .catch((err) => console.error('sessionCompleted notification (teacher) failed:', err.message));
+    if (teacher) {
+        notificationService
+            .sessionCompleted(teacher._id, learner?.fullName || 'your partner', session._id, session.title, io)
+            .catch((err) => console.error('sessionCompleted notification (teacher) failed:', err.message));
+    }
 
-    notificationService
-        .sessionCompleted(learnerId, teacherName, session._id, session.title, io)
-        .catch((err) => console.error('sessionCompleted notification (learner) failed:', err.message));
+    if (learner) {
+        notificationService
+            .sessionCompleted(learner._id, teacher?.fullName || 'your partner', session._id, session.title, io)
+            .catch((err) => console.error('sessionCompleted notification (learner) failed:', err.message));
+    }
+
+    // Completed-session badges (First Session, Expert Mentor, ...) for both
+    // participants — fire-and-forget, like ratingController.
+    [teacher, learner].filter(Boolean).forEach((participant) => {
+        reputationService
+            .evaluateUserBadges(participant._id, io)
+            .catch((err) => console.error('evaluateUserBadges after completion failed:', err.message));
+    });
 
     res.status(200).json({
         success: true,

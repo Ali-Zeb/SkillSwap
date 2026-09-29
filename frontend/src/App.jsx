@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { getMe, selectIsAuthenticated, selectToken } from './features/auth/authSlice'
+import { getMe, selectIsAuthenticated, selectToken, selectCurrentUser } from './features/auth/authSlice'
 
 import Layout               from './components/layout/Layout'
 import LandingPage          from './pages/LandingPage'
 import LoginPage            from './pages/auth/LoginPage'
 import RegisterPage         from './pages/auth/RegisterPage'
+import CheckEmailPage       from './pages/auth/CheckEmailPage'
+import VerifyEmailPage      from './pages/auth/VerifyEmailPage'
+import ForgotPasswordPage   from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage    from './pages/auth/ResetPasswordPage'
 import DashboardPage        from './pages/DashboardPage'
 import ProfilePage          from './pages/ProfilePage'
 import EditProfilePage      from './pages/EditProfilePage'
@@ -17,6 +21,13 @@ import SessionRoomPage      from './pages/SessionRoomPage'
 import MessagesPage         from './pages/MessagesPage'
 import RatingsPage          from './pages/RatingsPage'
 import NotificationsPage    from './pages/NotificationsPage'
+import MyReportsPage        from './pages/MyReportsPage'
+import AdminDashboardPage   from './pages/admin/AdminDashboardPage'
+import AdminUsersPage       from './pages/admin/AdminUsersPage'
+import AdminReportsPage     from './pages/admin/AdminReportsPage'
+import AdminSessionsPage    from './pages/admin/AdminSessionsPage'
+import AdminAuditLogPage    from './pages/admin/AdminAuditLogPage'
+import Spinner              from './components/ui/Spinner'
 
 const NotFoundPage = function() {
     return (
@@ -33,6 +44,24 @@ const ProtectedRoute = function({ children }) {
     const tokenInStorage  = sessionStorage.getItem('skillswap_token')
     if (!isAuthenticated && !tokenInStorage) {
         return <Navigate to="/login" replace />
+    }
+    return <Layout>{children}</Layout>
+}
+
+// Client-side gate for the admin area. The real enforcement is server-side:
+// every /api/admin route re-checks the role from the database.
+const AdminRoute = function({ children }) {
+    const isAuthenticated = useSelector(selectIsAuthenticated)
+    const user            = useSelector(selectCurrentUser)
+    const tokenInStorage  = sessionStorage.getItem('skillswap_token')
+    if (!isAuthenticated && !tokenInStorage) {
+        return <Navigate to="/login" replace />
+    }
+    if (!user) {
+        return <Layout><div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}><Spinner size="lg" /></div></Layout>
+    }
+    if (user.role !== 'admin') {
+        return <Navigate to="/dashboard" replace />
     }
     return <Layout>{children}</Layout>
 }
@@ -62,6 +91,11 @@ const App = function() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+            <Route path="/check-email"            element={<PublicRoute><CheckEmailPage /></PublicRoute>} />
+            <Route path="/forgot-password"        element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+            {/* Token links work whether or not someone is signed in on this browser. */}
+            <Route path="/verify-email/:token"    element={<VerifyEmailPage />} />
+            <Route path="/reset-password/:token"  element={<ResetPasswordPage />} />
 
             <Route path="/dashboard"        element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/profile/edit"     element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
@@ -75,6 +109,13 @@ const App = function() {
             <Route path="/messages/:userId" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/ratings"          element={<ProtectedRoute><RatingsPage /></ProtectedRoute>} />
             <Route path="/notifications"    element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/reports"          element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
+
+            <Route path="/admin"            element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+            <Route path="/admin/users"      element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+            <Route path="/admin/reports"    element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
+            <Route path="/admin/sessions"   element={<AdminRoute><AdminSessionsPage /></AdminRoute>} />
+            <Route path="/admin/audit-logs" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
 
             <Route path="*" element={<NotFoundPage />} />
         </Routes>

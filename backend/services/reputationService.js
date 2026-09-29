@@ -4,7 +4,7 @@ const Session             = require('../models/Session');
 const Request             = require('../models/Request');
 const evaluateBadges      = require('../utils/badgeEvaluator');
 const notificationService = require('./notificationService');
-const { SESSION_STATUS, BADGE_META } = require('../config/constants');
+const { SESSION_STATUS, BADGE_META, BADGE_THRESHOLDS } = require('../config/constants');
 
 /**
  * ReputationService
@@ -120,17 +120,23 @@ const _assembleStats = async (userId, ratings, average) => {
  * @param {string[]}                    existingBadgeTypes Types the user already holds
  * @param {object|null}                 io                 Socket.io instance
  */
-const _persistNewBadges = async (userId, evaluatedBadges, existingBadgeTypes, io) => {
+const _persistNewBadges = async (userId, evaluatedBadges, existingBadgeTypes, io, notify = true) => {
     const newBadges = evaluatedBadges.filter(
         (b) => !existingBadgeTypes.includes(b.type)
     );
 
     if (newBadges.length === 0) return;
 
-    // Push all newly earned badges in one update
-    await User.findByIdAndUpdate(userId, {
-        $push: { badges: { $each: newBadges } }
-    });
+    // Push only badges not already stored. The type filter makes this safe
+    // when two pipeline runs for the same user overlap.
+    for (const badge of newBadges) {
+        await User.updateOne(
+            { _id: userId, 'badges.type': { $ne: badge.type } },
+            { $push: { badges: badge } }
+        );
+    }
+
+    if (!notify) return;
 
     // Send a notification for each new badge.
     // Use presentation data from BADGE_META — never from the stored document.
@@ -166,21 +172,89 @@ const _persistNewBadges = async (userId, evaluatedBadges, existingBadgeTypes, io
  * @param {string|ObjectId} revieweeId   The user who received the rating
  * @param {object|null}     io           Socket.io server instance (may be null)
  */
-const processNewRating = async (revieweeId, io) => {
+/**
+ * Full reputation + badge pipeline for one user: recomputes reputation,
+ * evaluates every badge, persists newly earned ones and (unless
+ * options.notify is false) notifies the user. Safe to call repeatedly —
+ * already-earned badges are never duplicated.
+ *
+ * Triggered after a rating (processNewRating), after a session is
+ * completed (sessionController), and by scripts/reevaluateBadges.js.
+ *
+ * @param {string|ObjectId} userId
+ * @param {object|null}     io
+ * @param {{ notify?: boolean }} [options]
+ * @returns {Promise<string[]>} Types of the badges newly awarded
+ */
+const evaluateUserBadges = async (userId, io, { notify = true } = {}) => {
     // Fetch all ratings once — reused by both _computeAverage and _assembleStats
-    const ratings = await Rating.find({ revieweeId }).lean();
+    const ratings = await Rating.find({ revieweeId: userId }).lean();
 
     const average = _computeAverage(ratings);
 
     // Run reputation persistence and stats assembly in parallel
     const [, stats] = await Promise.all([
-        _persistReputation(revieweeId, average),
-        _assembleStats(revieweeId, ratings, average)
+        _persistReputation(userId, average),
+        _assembleStats(userId, ratings, average)
     ]);
 
     const evaluatedBadges = evaluateBadges(stats);
+    const newTypes = evaluatedBadges
+        .map((b) => b.type)
+        .filter((type) => !stats.existingBadgeTypes.includes(type));
 
-    await _persistNewBadges(revieweeId, evaluatedBadges, stats.existingBadgeTypes, io);
+    await _persistNewBadges(userId, evaluatedBadges, stats.existingBadgeTypes, notify ? io : null, notify);
+    return newTypes;
 };
 
-module.exports = { processNewRating };
+const processNewRating = (revieweeId, io) => evaluateUserBadges(revieweeId, io);
+
+/**
+ * Earned and locked badges for a user, each with its requirement and the
+ * user's current progress toward it. Read-only.
+ */
+const getBadgeProgress = async (userId) => {
+    const ratings = await Rating.find({ revieweeId: userId }).select('rating createdAt').lean();
+    const stats   = await _assembleStats(userId, ratings, _computeAverage(ratings));
+    const user    = await User.findById(userId).select('badges').lean();
+    const earnedAt = new Map((user?.badges || []).map((b) => [b.type, b.earnedAt]));
+    const T = BADGE_THRESHOLDS;
+
+    const ratio = (value, target) => Math.max(0, Math.min(1, target > 0 ? value / target : 0));
+    const round1 = (n) => Math.round(n * 10) / 10;
+
+    // Each badge's progress is the weakest of its conditions.
+    const progressFor = {
+        first_session:  [ratio(stats.completedSessions, T.FIRST_SESSION_MIN_COMPLETED),
+            `${stats.completedSessions}/${T.FIRST_SESSION_MIN_COMPLETED} completed session`],
+        expert_mentor:  [ratio(stats.sessionsAsTeacher, T.EXPERT_MENTOR_MIN_TAUGHT),
+            `${stats.sessionsAsTeacher}/${T.EXPERT_MENTOR_MIN_TAUGHT} sessions taught`],
+        top_teacher:    [Math.min(ratio(stats.sessionsAsTeacher, T.TOP_TEACHER_MIN_SESSIONS_TAUGHT), ratio(stats.averageRating, T.TOP_TEACHER_MIN_RATING)),
+            `${stats.sessionsAsTeacher}/${T.TOP_TEACHER_MIN_SESSIONS_TAUGHT} taught · rating ${round1(stats.averageRating)}/${T.TOP_TEACHER_MIN_RATING}`],
+        highly_rated:   [Math.min(ratio(stats.totalRatingsCount, T.HIGHLY_RATED_MIN_RATINGS_COUNT), ratio(stats.averageRating, T.HIGHLY_RATED_MIN_RATING)),
+            `${stats.totalRatingsCount}/${T.HIGHLY_RATED_MIN_RATINGS_COUNT} ratings · average ${round1(stats.averageRating)}/${T.HIGHLY_RATED_MIN_RATING}`],
+        perfect_score:  [ratio(stats.last5Ratings.every((r) => r === 5) ? stats.last5Ratings.length : 0, T.PERFECT_SCORE_WINDOW),
+            `${stats.last5Ratings.every((r) => r === 5) ? stats.last5Ratings.length : 0}/${T.PERFECT_SCORE_WINDOW} five-star ratings in a row`],
+        fast_responder: [Math.min(ratio(stats.totalRequestsReceived, T.FAST_RESPONDER_MIN_REQUESTS), ratio(stats.responseRate, T.FAST_RESPONDER_MIN_RATE)),
+            `${stats.totalRequestsReceived}/${T.FAST_RESPONDER_MIN_REQUESTS} requests · ${Math.round(stats.responseRate * 100)}%/${Math.round(T.FAST_RESPONDER_MIN_RATE * 100)}% answered in 24h`],
+        skill_master:   [ratio(stats.teachSkillsCount, T.SKILL_MASTER_MIN_TEACH_SKILLS),
+            `${stats.teachSkillsCount}/${T.SKILL_MASTER_MIN_TEACH_SKILLS} skills offered to teach`]
+    };
+
+    return Object.entries(BADGE_META).map(([type, meta]) => {
+        const [progress, progressLabel] = progressFor[type] || [0, ''];
+        const earned = earnedAt.has(type);
+        return {
+            type,
+            label:       meta.label,
+            icon:        meta.icon,
+            description: meta.description,
+            earned,
+            earnedAt:    earned ? earnedAt.get(type) : null,
+            progress:    earned ? 1 : Math.round(progress * 100) / 100,
+            progressLabel
+        };
+    });
+};
+
+module.exports = { processNewRating, evaluateUserBadges, getBadgeProgress };

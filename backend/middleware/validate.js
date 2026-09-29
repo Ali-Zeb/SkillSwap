@@ -14,6 +14,8 @@
  *   min: minimum length (string/array) or value (number)
  *   max: maximum length (string/array) or value (number)
  *   enum: array of allowed values
+ *   transform: (value) => newValue — applied first and written back to req.body
+ *   custom: (value) => string|null — returns an error message, or null if valid
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,6 +72,11 @@ const validateField = (key, value, rules) => {
         errors.push(`${key} must be one of: ${rules.enum.join(', ')}`);
     }
 
+    if (rules.custom && errors.length === 0) {
+        const customError = rules.custom(value);
+        if (customError) errors.push(customError);
+    }
+
     return errors;
 };
 
@@ -83,6 +90,9 @@ const validateBody = (schema) => {
         const allErrors = [];
 
         for (const [key, rules] of Object.entries(schema)) {
+            if (rules.transform && req.body[key] !== undefined) {
+                req.body[key] = rules.transform(req.body[key]);
+            }
             const fieldErrors = validateField(key, req.body[key], rules);
             allErrors.push(...fieldErrors);
         }
@@ -90,7 +100,8 @@ const validateBody = (schema) => {
         if (allErrors.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Validation failed',
+                // Joined so clients that only show `message` still get the specifics.
+                message: allErrors.join('. '),
                 errors: allErrors
             });
         }

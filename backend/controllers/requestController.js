@@ -4,6 +4,7 @@ const { REQUEST_STATUS }  = require('../config/constants');
 const asyncHandler        = require('../utils/asyncHandler');
 const notificationService = require('../services/notificationService');
 const userMetricsService  = require('../services/userMetricsService');
+const reputationService   = require('../services/reputationService');
 
 /**
  * Returns the Socket.io instance registered on the Express app.
@@ -121,7 +122,9 @@ const acceptRequest = asyncHandler(async (req, res) => {
     // Recalculate the acceptor's response rate.
     userMetricsService
         .updateResponseRate(req.user.id)
-        .catch((err) => console.error('updateResponseRate (accept) failed:', err.message));
+        // Fast Responder depends on the fresh response rate, so evaluate after it.
+        .then(() => reputationService.evaluateUserBadges(req.user.id, getIo(req)))
+        .catch((err) => console.error('updateResponseRate/badges (accept) failed:', err.message));
 
     res.status(200).json({
         success: true,
@@ -166,7 +169,9 @@ const declineRequest = asyncHandler(async (req, res) => {
     // Declining counts as a response — update responseRate.
     userMetricsService
         .updateResponseRate(req.user.id)
-        .catch((err) => console.error('updateResponseRate (decline) failed:', err.message));
+        // Fast Responder depends on the fresh response rate, so evaluate after it.
+        .then(() => reputationService.evaluateUserBadges(req.user.id, getIo(req)))
+        .catch((err) => console.error('updateResponseRate/badges (decline) failed:', err.message));
 
     res.status(200).json({
         success: true,

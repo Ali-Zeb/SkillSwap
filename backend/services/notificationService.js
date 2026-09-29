@@ -1,5 +1,6 @@
 const Notification           = require('../models/Notification');
-const { NOTIFICATION_TYPES } = require('../config/constants');
+const User                   = require('../models/User');
+const { NOTIFICATION_TYPES, REPORT_REASON_LABELS } = require('../config/constants');
 
 /**
  * NotificationService
@@ -199,6 +200,27 @@ const newMessage = (receiverId, senderName, senderId, preview, io) => {
     );
 };
 
+/**
+ * Notifies every active admin that a new report was filed.
+ * Each admin notification is independent — one failure does not stop the rest.
+ */
+const reportReceived = async (report, reportedUserName, io) => {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
+    const reasonLabel = REPORT_REASON_LABELS[report.reason] || report.reason;
+
+    await Promise.allSettled(admins.map((admin) =>
+        createNotification(
+            admin._id,
+            NOTIFICATION_TYPES.REPORT_RECEIVED,
+            'New Report',
+            `${reportedUserName} was reported for: ${reasonLabel}.`,
+            '/admin/reports',
+            { reportId: report._id },
+            io
+        )
+    ));
+};
+
 const badgeEarned = (userId, badgeLabel, badgeIcon, io) =>
     createNotification(
         userId,
@@ -222,5 +244,6 @@ module.exports = {
     sessionCompleted,
     ratingReceived,
     newMessage,
-    badgeEarned
+    badgeEarned,
+    reportReceived
 };

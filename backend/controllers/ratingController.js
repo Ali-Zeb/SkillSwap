@@ -38,6 +38,18 @@ const submitRating = asyncHandler(async (req, res) => {
         });
     }
 
+    // The reviewee must be the OTHER participant of this session — never
+    // yourself or someone outside it.
+    const partnerId = String(session.teacherId) === reviewerId
+        ? String(session.learnerId)
+        : String(session.teacherId);
+    if (String(revieweeId) !== partnerId || String(revieweeId) === reviewerId) {
+        return res.status(400).json({
+            success: false,
+            message: 'You can only rate the other participant of this session'
+        });
+    }
+
     const existing = await Rating.findOne({ sessionId, reviewerId });
     if (existing) {
         return res.status(400).json({

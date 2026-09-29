@@ -45,6 +45,7 @@ const DAYS_OF_WEEK = [
 ];
 
 const LIMITS = {
+    FULL_NAME_MIN:            2,
     FULL_NAME_MAX:            50,
     HEADLINE_MAX:             100,
     ABOUT_MAX:                500,
@@ -59,7 +60,77 @@ const LIMITS = {
     AVATAR_FILE_SIZE_MB:      2,
     CHAT_FILE_SIZE_MB:        10,
     NOTIFICATION_TITLE_MAX:   100,
-    NOTIFICATION_MESSAGE_MAX: 300
+    NOTIFICATION_MESSAGE_MAX: 300,
+    REPORT_DESCRIPTION_MAX:   1000,
+    RESOLUTION_NOTE_MAX:      1000
+};
+
+const REPORT_REASONS = {
+    HARASSMENT:    'harassment',
+    SPAM:          'spam',
+    FAKE_PROFILE:  'fake_profile',
+    SCAM:          'scam',
+    INAPPROPRIATE: 'inappropriate',
+    OTHER:         'other'
+};
+
+const REPORT_REASON_LABELS = {
+    harassment:    'Harassment',
+    spam:          'Spam',
+    fake_profile:  'Fake profile',
+    scam:          'Scam / fraud',
+    inappropriate: 'Inappropriate content',
+    other:         'Other'
+};
+
+const REPORT_STATUS = {
+    PENDING:      'pending',
+    UNDER_REVIEW: 'under_review',
+    RESOLVED:     'resolved',
+    DISMISSED:    'dismissed'
+};
+
+const REPORT_TARGET_TYPES = ['user', 'session', 'message'];
+
+const USER_ROLES = ['user', 'admin'];
+
+const AUTH_TOKEN_TTL = {
+    EMAIL_VERIFICATION_MS: 24 * 60 * 60 * 1000,   // 24 hours
+    PASSWORD_RESET_MS:     15 * 60 * 1000         // 15 minutes
+};
+
+// Common throwaway-inbox providers blocked at registration. Extend as
+// new ones show up in sign-ups; matching includes subdomains.
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+    '10minutemail.com', '10minutemail.net', '20minutemail.com', 'anonaddy.me', 'burnermail.io',
+    'dispostable.com', 'dropmail.me', 'emailondeck.com', 'fakeinbox.com', 'fakemail.net',
+    'getairmail.com', 'getnada.com', 'guerrillamail.biz', 'guerrillamail.com', 'guerrillamail.de',
+    'guerrillamail.net', 'guerrillamail.org', 'guerrillamailblock.com', 'harakirimail.com', 'inboxbear.com',
+    'incognitomail.org', 'jetable.org', 'mail.tm', 'mailcatch.com', 'maildrop.cc',
+    'mailinator.com', 'mailinator.net', 'mailnesia.com', 'mailpoof.com', 'mintemail.com',
+    'mohmal.com', 'moakt.com', 'mytemp.email', 'nada.email', 'sharklasers.com',
+    'spam4.me', 'spamgourmet.com', 'temp-mail.io', 'temp-mail.org', 'tempail.com',
+    'tempmail.com', 'tempmail.net', 'tempmail.plus', 'tempmailo.com', 'tempr.email',
+    'throwawaymail.com', 'trashmail.com', 'trashmail.de', 'yopmail.com', 'yopmail.fr',
+    'yopmail.net', 'emailfake.com', 'mailforspam.com', 'grr.la', 'spambox.us'
+]);
+
+const isDisposableEmail = (email) => {
+    const domain = String(email).split('@')[1]?.toLowerCase().trim();
+    if (!domain) return false;
+    const parts = domain.split('.');
+    // Check the domain and each parent (sub.mailinator.com → mailinator.com).
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (DISPOSABLE_EMAIL_DOMAINS.has(parts.slice(i).join('.'))) return true;
+    }
+    return false;
+};
+
+const AUDIT_ACTIONS = {
+    USER_DEACTIVATED: 'user_deactivated',
+    USER_ACTIVATED:   'user_activated',
+    ROLE_CHANGED:     'role_changed',
+    REPORT_UPDATED:   'report_updated'
 };
 
 const NOTIFICATION_TYPES = {
@@ -74,7 +145,8 @@ const NOTIFICATION_TYPES = {
     SESSION_COMPLETED: 'session_completed',
     RATING_RECEIVED:   'rating_received',
     NEW_MESSAGE:       'new_message',
-    BADGE_EARNED:      'badge_earned'
+    BADGE_EARNED:      'badge_earned',
+    REPORT_RECEIVED:   'report_received'
 };
 
 // ---------------------------------------------------------------------------
@@ -98,13 +170,13 @@ const BADGE_TYPES = {
 // notificationService when building badge-earned notification messages.
 // ---------------------------------------------------------------------------
 const BADGE_META = {
-    first_session:  { label: 'First Session',  icon: '🥇' },
-    expert_mentor:  { label: 'Expert Mentor',  icon: '🏆' },
-    top_teacher:    { label: 'Top Teacher',    icon: '🎓' },
-    highly_rated:   { label: 'Highly Rated',   icon: '⭐' },
-    perfect_score:  { label: 'Perfect Score',  icon: '💯' },
-    fast_responder: { label: 'Fast Responder', icon: '⚡' },
-    skill_master:   { label: 'Skill Master',   icon: '🎯' }
+    first_session:  { label: 'First Session',  icon: '🥇', description: 'Complete your first session' },
+    expert_mentor:  { label: 'Expert Mentor',  icon: '🏆', description: 'Teach 10 completed sessions' },
+    top_teacher:    { label: 'Top Teacher',    icon: '🎓', description: 'Teach 5 sessions with an average rating of 4.8+' },
+    highly_rated:   { label: 'Highly Rated',   icon: '⭐', description: 'Receive 10 ratings with an average of 4.0+' },
+    perfect_score:  { label: 'Perfect Score',  icon: '💯', description: 'Get five 5-star ratings in a row' },
+    fast_responder: { label: 'Fast Responder', icon: '⚡', description: 'Answer 80% of 5+ requests within 24 hours' },
+    skill_master:   { label: 'Skill Master',   icon: '🎯', description: 'Offer to teach 3 or more skills' }
 };
 
 // ---------------------------------------------------------------------------
@@ -128,6 +200,19 @@ const BADGE_THRESHOLDS = {
 // Profile completion weights — must sum to 100.
 // Used exclusively by utils/profileCompletion.js.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Real-name rule. A "word" is one or more letters (Latin incl. accented, or
+// Arabic/Urdu script), optionally joined by a single . ' or - to more
+// letters ("Ali-Zeb", "O'Brien", "M.Ali"), and may end with a dot ("M.").
+// Words are separated by exactly one space ("M. Ihtesham", "Ali Zeb").
+// Digits and any other symbols are rejected. Length (2–50) is checked
+// separately against LIMITS so the messages can be specific.
+// The same pattern is mirrored in frontend/src/utils/validators.js.
+// ---------------------------------------------------------------------------
+const NAME_LETTER = "[A-Za-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u024F\\u0621-\\u063A\\u0641-\\u0652\\u0671-\\u06D3\\u06FA-\\u06FC]";
+const NAME_WORD   = `${NAME_LETTER}+(?:[.'-]${NAME_LETTER}+)*\\.?`;
+const NAME_REGEX  = new RegExp(`^${NAME_WORD}(?: ${NAME_WORD})*$`);
+
 const PROFILE_COMPLETION_WEIGHTS = {
     avatar:     20,
     headline:   15,
@@ -149,5 +234,14 @@ module.exports = {
     BADGE_TYPES,
     BADGE_META,
     BADGE_THRESHOLDS,
-    PROFILE_COMPLETION_WEIGHTS
+    PROFILE_COMPLETION_WEIGHTS,
+    NAME_REGEX,
+    REPORT_REASONS,
+    REPORT_REASON_LABELS,
+    REPORT_STATUS,
+    REPORT_TARGET_TYPES,
+    USER_ROLES,
+    AUDIT_ACTIONS,
+    AUTH_TOKEN_TTL,
+    isDisposableEmail
 };

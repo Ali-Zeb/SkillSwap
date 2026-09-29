@@ -109,13 +109,16 @@ const SessionCard = function({ session, currentUser, onCancel, onComplete, onApp
                         >
                             Enter Room
                         </Link>
-                        <button
-                            onClick={function() { onComplete(session._id) }}
-                            disabled={!!actionState}
-                            style={{ padding: '0.4375rem 0.875rem', background: '#d1fae5', color: '#065f46', border: 'none', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, cursor: actionState ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-                        >
-                            {actionState === 'completing' ? 'Completing...' : 'Complete'}
-                        </button>
+                        {/* Only once the session has started — the server enforces the same rule. */}
+                        {new Date(session.date) <= new Date() ? (
+                            <button
+                                onClick={function() { onComplete(session._id) }}
+                                disabled={!!actionState}
+                                style={{ padding: '0.4375rem 0.875rem', background: '#d1fae5', color: '#065f46', border: 'none', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, cursor: actionState ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+                            >
+                                {actionState === 'completing' ? 'Completing...' : 'Mark as completed'}
+                            </button>
+                        ) : null}
                         <button
                             onClick={function() { onCancel(session._id) }}
                             disabled={!!actionState}
@@ -416,10 +419,12 @@ const SessionsPage = function() {
     const handleComplete = async function(id) {
         setActionStates(function(p) { return { ...p, [id]: 'completing' } })
         try {
-            await api.put('/sessions/' + id + '/complete')
+            const { data } = await api.put('/sessions/' + id + '/complete')
             setUpcoming(function(p) { return p.filter(function(s) { return s._id !== id }) })
-        } catch {
+            setPast(function(p) { return [data.session, ...p.filter(function(s) { return s._id !== id })] })
+        } catch (err) {
             setActionStates(function(p) { return { ...p, [id]: null } })
+            setError(err.response?.data?.message || 'Could not mark the session as completed')
         }
     }
     const handleCancel = async function(id) {

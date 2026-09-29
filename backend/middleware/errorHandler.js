@@ -19,8 +19,8 @@ const errorHandler = (err, req, res, next) => {
 
     // Mongoose bad ObjectId (e.g. /api/users/not-a-valid-id)
     if (err.name === 'CastError') {
-        statusCode = 404;
-        message = 'Resource not found';
+        statusCode = 400;
+        message = err.kind === 'ObjectId' ? 'Invalid id format' : `Invalid value for ${err.path}`;
     }
 
     // Mongoose duplicate key (e.g. unique email already exists)

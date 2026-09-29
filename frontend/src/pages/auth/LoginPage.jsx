@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
     loginUser,
     clearError,
     selectAuthLoading,
     selectAuthError,
+    selectAuthErrorCode,
+    selectAuthErrorEmail,
     selectIsAuthenticated,
 } from '../../features/auth/authSlice'
 import Spinner from '../../components/ui/Spinner'
+import useResendVerification from '../../hooks/useResendVerification'
 
 const FEATURES = [
     'Access your matches',
@@ -23,6 +26,12 @@ const LoginPage = function() {
     const isLoading       = useSelector(selectAuthLoading)
     const error           = useSelector(selectAuthError)
     const isAuthenticated = useSelector(selectIsAuthenticated)
+    const [searchParams]  = useSearchParams()
+    const wasDeactivated  = searchParams.get('deactivated') === '1'
+    const wasSignedOut    = searchParams.get('expired') === '1'
+    const errorCode       = useSelector(selectAuthErrorCode)
+    const errorEmail      = useSelector(selectAuthErrorEmail)
+    const { resend, status: resendStatus, message: resendMessage } = useResendVerification()
 
     const [email,    setEmail]    = useState('')
     const [password, setPassword] = useState('')
@@ -123,9 +132,30 @@ const LoginPage = function() {
                             <h1 style={{ fontSize: '1.625rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.375rem' }}>Login to Account</h1>
                             <p style={{ color: '#64748b', fontSize: '0.9375rem', marginBottom: '1.75rem' }}>Please enter your credentials to continue</p>
 
-                            {error ? (
-                                <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: '1.25rem' }}>
-                                    <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>{error}</p>
+                            {error || wasDeactivated || wasSignedOut ? (
+                                <div role="alert" style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: '1.25rem' }}>
+                                    <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                                        {error || (wasDeactivated
+                                            ? 'Your account has been deactivated, so you were signed out. Contact support if you think this is a mistake.'
+                                            : 'Your password was changed, so you were signed out. Please log in again.')}
+                                    </p>
+                                    {errorCode === 'EMAIL_NOT_VERIFIED' && (
+                                        <div style={{ marginTop: '0.5rem' }}>
+                                            {resendStatus === 'sent' ? (
+                                                <p style={{ color: '#166534', fontSize: '0.8125rem' }}>{resendMessage}</p>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={function() { resend(errorEmail || email.trim()) }}
+                                                    disabled={resendStatus === 'sending'}
+                                                    style={{ background: 'none', border: 'none', padding: 0, color: '#2563eb', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                                                >
+                                                    {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                                                </button>
+                                            )}
+                                            {resendStatus === 'error' && <p style={{ color: '#dc2626', fontSize: '0.8125rem', marginTop: 4 }}>{resendMessage}</p>}
+                                        </div>
+                                    )}
                                 </div>
                             ) : null}
 
@@ -165,7 +195,7 @@ const LoginPage = function() {
                                     />
                                     {errors.password ? <p style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: 4 }}>{errors.password}</p> : null}
                                     <div style={{ textAlign: 'right', marginTop: '0.375rem' }}>
-                                        <span style={{ fontSize: '0.8125rem', color: '#2563eb', cursor: 'pointer' }}>Forgot password?</span>
+                                        <Link to="/forgot-password" style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}>Forgot password?</Link>
                                     </div>
                                 </div>
 

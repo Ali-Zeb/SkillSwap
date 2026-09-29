@@ -5,6 +5,7 @@ const { protect } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const { upload, handleUploadError } = require('../middleware/upload');
 const { LIMITS, SKILL_TYPES } = require('../config/constants');
+const { normalizeName } = require('../utils/nameValidation');
 
 const {
     getMyProfile,
@@ -23,7 +24,9 @@ router.put(
     '/profile',
     protect,
     validateBody({
-        fullName: { type: 'string', min: 2, max: LIMITS.FULL_NAME_MAX },
+        // Only normalized here — the real-name rule is enforced in
+        // updateProfile, and only when the name actually changes.
+        fullName: { type: 'string', transform: normalizeName },
         headline: { type: 'string', max: LIMITS.HEADLINE_MAX },
         about: { type: 'string', max: LIMITS.ABOUT_MAX },
         location: { type: 'string', max: 100 }
