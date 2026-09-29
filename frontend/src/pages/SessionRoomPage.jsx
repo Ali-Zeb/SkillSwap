@@ -6,6 +6,7 @@ import { io } from 'socket.io-client'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import MessageAttachment from '../components/ui/MessageAttachment'
+import ReportModal from '../components/ui/ReportModal'
 import { getAvatarUrl } from '../utils/helpers'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
@@ -63,6 +64,7 @@ const SessionRoomPage = function () {
     const [remoteAutoplayBlocked, setRemoteAutoplayBlocked] = useState(false)
     const [callStatus,    setCallStatus]    = useState('waiting')
     const [recording,     setRecording]     = useState(false)
+    const [reportOpen,    setReportOpen]    = useState(false)
     const [recordingTime, setRecordingTime] = useState(0)
     const [messages,      setMessages]      = useState([])
     const [newMessage,    setNewMessage]    = useState('')
@@ -686,8 +688,27 @@ const SessionRoomPage = function () {
                             <span>REC {formatRecTime(recordingTime)}</span>
                         </div>
                     )}
+                    {partner?._id && (
+                        <button
+                            type="button"
+                            onClick={function () { setReportOpen(true) }}
+                            title="Report participant"
+                            aria-label="Report participant"
+                            style={{ padding: '0.3125rem 0.625rem', borderRadius: 8, border: '1px solid rgba(248,113,113,0.6)', background: 'transparent', color: '#f87171', fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                            Report
+                        </button>
+                    )}
                 </div>
             </header>
+
+            <ReportModal
+                isOpen={reportOpen}
+                onClose={function () { setReportOpen(false) }}
+                reportedUser={partner}
+                targetType="session"
+                targetId={id}
+            />
 
             {/* ── Main ── */}
             <div className="sr-main">

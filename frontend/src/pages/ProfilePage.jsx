@@ -5,6 +5,7 @@ import { selectCurrentUser } from '../features/auth/authSlice'
 import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
+import ReportModal from '../components/ui/ReportModal'
 import {
     getAvatarUrl,
     formatReputation,
@@ -32,6 +33,7 @@ const ProfilePage = () => {
     const [activeTab,      setActiveTab]      = useState('about')
     const [requestSent,    setRequestSent]    = useState(false)
     const [sending,        setSending]        = useState(false)
+    const [reportOpen,     setReportOpen]     = useState(false)
 
     const profileId    = id || currentUser?._id
     const isOwnProfile = !id || id === currentUser?._id
@@ -289,12 +291,20 @@ const ProfilePage = () => {
                     {/* Action buttons */}
                     <div className="profile-header-actions">
                         {isOwnProfile ? (
-                            <Link
-                                to="/profile/edit"
-                                style={{ padding: '0.5625rem 1.25rem', background: 'white', color: '#2563eb', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none', textAlign: 'center' }}
-                            >
-                                Edit Profile
-                            </Link>
+                            <>
+                                <Link
+                                    to="/profile/edit"
+                                    style={{ padding: '0.5625rem 1.25rem', background: 'white', color: '#2563eb', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none', textAlign: 'center' }}
+                                >
+                                    Edit Profile
+                                </Link>
+                                <Link
+                                    to="/reports"
+                                    style={{ padding: '0.5625rem 1.25rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 8, fontWeight: 500, fontSize: '0.9rem', textDecoration: 'none', textAlign: 'center' }}
+                                >
+                                    My Reports
+                                </Link>
+                            </>
                         ) : (
                             <>
                                 <button
@@ -310,6 +320,13 @@ const ProfilePage = () => {
                                 >
                                     Message
                                 </Link>
+                                <button
+                                    type="button"
+                                    onClick={function() { setReportOpen(true) }}
+                                    style={{ padding: '0.5625rem 1.25rem', background: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 8, fontWeight: 500, fontSize: '0.9rem', cursor: 'pointer' }}
+                                >
+                                    Report
+                                </button>
                             </>
                         )}
                     </div>
@@ -552,6 +569,14 @@ const ProfilePage = () => {
                     </div>
                 )}
             </div>
+
+            {!isOwnProfile && (
+                <ReportModal
+                    isOpen={reportOpen}
+                    onClose={function() { setReportOpen(false) }}
+                    reportedUser={profileUser}
+                />
+            )}
         </div>
     )
 }

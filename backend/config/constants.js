@@ -60,8 +60,37 @@ const LIMITS = {
     AVATAR_FILE_SIZE_MB:      2,
     CHAT_FILE_SIZE_MB:        10,
     NOTIFICATION_TITLE_MAX:   100,
-    NOTIFICATION_MESSAGE_MAX: 300
+    NOTIFICATION_MESSAGE_MAX: 300,
+    REPORT_DESCRIPTION_MAX:   1000,
+    RESOLUTION_NOTE_MAX:      1000
 };
+
+const REPORT_REASONS = {
+    HARASSMENT:    'harassment',
+    SPAM:          'spam',
+    FAKE_PROFILE:  'fake_profile',
+    SCAM:          'scam',
+    INAPPROPRIATE: 'inappropriate',
+    OTHER:         'other'
+};
+
+const REPORT_REASON_LABELS = {
+    harassment:    'Harassment',
+    spam:          'Spam',
+    fake_profile:  'Fake profile',
+    scam:          'Scam / fraud',
+    inappropriate: 'Inappropriate content',
+    other:         'Other'
+};
+
+const REPORT_STATUS = {
+    PENDING:      'pending',
+    UNDER_REVIEW: 'under_review',
+    RESOLVED:     'resolved',
+    DISMISSED:    'dismissed'
+};
+
+const REPORT_TARGET_TYPES = ['user', 'session', 'message'];
 
 const NOTIFICATION_TYPES = {
     REQUEST_RECEIVED:  'request_received',
@@ -75,7 +104,8 @@ const NOTIFICATION_TYPES = {
     SESSION_COMPLETED: 'session_completed',
     RATING_RECEIVED:   'rating_received',
     NEW_MESSAGE:       'new_message',
-    BADGE_EARNED:      'badge_earned'
+    BADGE_EARNED:      'badge_earned',
+    REPORT_RECEIVED:   'report_received'
 };
 
 // ---------------------------------------------------------------------------
@@ -164,5 +194,9 @@ module.exports = {
     BADGE_META,
     BADGE_THRESHOLDS,
     PROFILE_COMPLETION_WEIGHTS,
-    NAME_REGEX
+    NAME_REGEX,
+    REPORT_REASONS,
+    REPORT_REASON_LABELS,
+    REPORT_STATUS,
+    REPORT_TARGET_TYPES
 };

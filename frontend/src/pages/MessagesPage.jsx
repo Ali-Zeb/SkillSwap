@@ -7,6 +7,7 @@ import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import EmptyState from '../components/ui/EmptyState'
 import MessageAttachment from '../components/ui/MessageAttachment'
+import ReportModal from '../components/ui/ReportModal'
 import { useToast } from '../components/layout/Layout'
 import { getAvatarUrl, timeAgo, truncate } from '../utils/helpers'
 
@@ -20,6 +21,7 @@ const MessagesPage = function() {
     const { showToast } = useToast()
 
     const [conversations, setConversations] = useState([])
+    const [reportOpen,    setReportOpen]    = useState(false)
     const [active,        setActive]        = useState(null)
     const [messages,      setMessages]      = useState([])
     const [text,          setText]          = useState('')
@@ -377,7 +379,21 @@ const MessagesPage = function() {
                     >
                         View Profile
                     </button>
+                    <button
+                        type="button"
+                        onClick={function() { setReportOpen(true) }}
+                        title="Report user"
+                        aria-label={'Report ' + active.fullName}
+                        style={{ padding: '0.375rem 0.625rem', border: '1.5px solid #fee2e2', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 500, color: '#dc2626', background: 'white', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+                    >
+                        Report
+                    </button>
                 </div>
+                <ReportModal
+                    isOpen={reportOpen}
+                    onClose={function() { setReportOpen(false) }}
+                    reportedUser={active}
+                />
                 {/* Messages */}
                 <div style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
                     {renderMessages()}

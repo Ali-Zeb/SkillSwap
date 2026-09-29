@@ -24,4 +24,20 @@ const authLimiter = rateLimit({
     legacyHeaders:   false,
 })
 
-module.exports = { generalLimiter, authLimiter }
+/**
+ * Report submissions: 10 successful reports per user per hour. Must run
+ * after `protect` so the limit is per account rather than per shared IP.
+ * Rejected attempts (validation errors, duplicates) don't use up the quota;
+ * generalLimiter still caps raw request volume.
+ */
+const reportLimiter = rateLimit({
+    windowMs:     60 * 60 * 1000,
+    max:          10,
+    keyGenerator: (req) => `report_${req.user.id}`,
+    skipFailedRequests: true,
+    message:      { success: false, message: 'You have submitted too many reports. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders:   false,
+})
+
+module.exports = { generalLimiter, authLimiter, reportLimiter }

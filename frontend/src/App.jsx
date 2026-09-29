@@ -17,6 +17,7 @@ import SessionRoomPage      from './pages/SessionRoomPage'
 import MessagesPage         from './pages/MessagesPage'
 import RatingsPage          from './pages/RatingsPage'
 import NotificationsPage    from './pages/NotificationsPage'
+import MyReportsPage        from './pages/MyReportsPage'
 
 const NotFoundPage = function() {
     return (
@@ -75,6 +76,7 @@ const App = function() {
             <Route path="/messages/:userId" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/ratings"          element={<ProtectedRoute><RatingsPage /></ProtectedRoute>} />
             <Route path="/notifications"    element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/reports"          element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFoundPage />} />
         </Routes>

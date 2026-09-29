@@ -16,14 +16,25 @@ const getMyProfile = asyncHandler(async (req, res) => {
 // @desc    Get another user's public profile
 // @route   GET /api/users/profile/:id
 // @access  Private
+// Only these fields are ever returned for another user's profile — never
+// email, role, account status, or any auth/security fields.
+const PUBLIC_PROFILE_FIELDS = [
+    'fullName', 'avatar', 'headline', 'about', 'location', 'skills',
+    'availability', 'reputation', 'badges', 'responseRate', 'lastActive', 'createdAt'
+].join(' ');
+
 const getPublicProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id).populate('skills.skillId');
+    const user = await User.findById(req.params.id)
+        .select(`${PUBLIC_PROFILE_FIELDS} isActive`)
+        .populate('skills.skillId', 'name category');
 
     if (!user || !user.isActive) {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.status(200).json({ success: true, user });
+    // isActive was selected only for the check above — strip it.
+    const { isActive, ...publicUser } = user.toJSON();
+    res.status(200).json({ success: true, user: publicUser });
 });
 
 // @desc    Update the current user's profile fields
