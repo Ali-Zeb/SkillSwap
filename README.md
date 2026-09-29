@@ -22,7 +22,11 @@
 - **AI Assistant** — Powered by Groq API (Llama 3.3 70B) with a local rule-based fallback for reliability
 - **Ratings & Reputation** — Post-session rating system to build user credibility
 - **Notifications** — In-app notification system for matches, messages, and session requests
-- **Profile Management** — Editable profiles with avatar upload (Cloudinary-backed, persists across deploys)
+- **Profile Management** — Editable profiles with avatar upload (Cloudinary-backed, persists across deploys) and real-name validation (Latin + Urdu/Arabic letters)
+- **Email Verification & Password Reset** — Verification link on sign-up (disposable domains blocked), forgot/reset password with single-use hashed tokens; a reset signs the user out everywhere
+- **Session Recording** — Records the whole class (shared screen, both cameras, both voices) into a downloadable `.webm`; the other participant is notified
+- **Badges** — Seven achievement badges awarded after sessions, ratings, skills and request replies, with earned/locked progress on the profile
+- **Reports & Admin Panel** — Users can report profiles, chats or sessions; admins get a dashboard, user management (roles, deactivation), report review, sessions and an audit log of every admin action
 - **Fully Responsive UI** — Built with React 19 + Tailwind CSS
 
 ---
@@ -74,9 +78,10 @@
    cd backend
    npm install
    cp .env.example .env
-   # Fill in your MongoDB URI, JWT secret, Groq API key, and Cloudinary credentials in .env
+   # Fill in your MongoDB URI, JWT secret, Groq API key, Cloudinary and Brevo credentials in .env
    npm start
    ```
+   For local development you can leave the Brevo values empty and set `EMAIL_PROVIDER=console` — verification and reset emails (with their links) are then printed in the backend log instead of being sent.
 
 3. **Frontend setup**
    ```bash
@@ -104,6 +109,54 @@
 
 The backend's CORS config (`backend/server.js`) allows both the local (`http://localhost:5173`) and production (`https://skillswap-frontend-cy48.onrender.com`) frontend origins at all times — so pointing a local frontend dev server at the live backend (or vice versa) never hits a CORS error.
 
+### Backend environment variables
+
+All are listed with placeholders in `backend/.env.example`. Set real values in `backend/.env` locally and in the Render dashboard for production — never commit them.
+
+| Variable | Purpose |
+|---|---|
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET`, `JWT_EXPIRE` | Token signing secret and lifetime (default `30d`) |
+| `CLIENT_URL` | Frontend URL — extra CORS origin **and** base for links in emails (e.g. `https://skillswap-frontend-cy48.onrender.com`) |
+| `GROQ_API_KEY`, `GROQ_MODEL` | AI assistant |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Avatar and chat file storage |
+| `EMAIL_PROVIDER` | `brevo` (production) or `console` (development: prints emails to the log) |
+| `BREVO_API_KEY` | Brevo API key (Brevo → SMTP & API → API Keys) |
+| `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` | Sender shown on emails; the address must be a verified sender in Brevo |
+
+### Email setup (Brevo)
+
+Render's free tier can block outbound SMTP ports, so SkillSwap sends email through Brevo's HTTP API.
+
+1. Create a free account at [brevo.com](https://www.brevo.com).
+2. **Senders & IPs → Senders → Add a sender**: add the address you send from and confirm it from Brevo's email. No domain is required.
+3. **SMTP & API → API Keys → Generate a new API key.**
+4. Set `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `EMAIL_FROM_ADDRESS` (the verified sender) and `EMAIL_FROM_NAME` in `backend/.env` and in Render.
+5. Make sure `CLIENT_URL` in Render is the deployed frontend URL so email links open the live site.
+
+The backend logs a warning on startup if email isn't configured.
+
+---
+
+## Maintenance Scripts
+
+Run from `backend/`. Each reads `MONGO_URI` from `backend/.env`. If connecting to Atlas fails with `queryTxt ETIMEOUT` (some networks block the DNS TXT lookup that `mongodb+srv://` needs), add `--no-srv`.
+
+| Command | What it does |
+|---|---|
+| `npm run make-admin -- you@example.com` | Promotes an **existing, registered** account to admin. No admin credentials are hardcoded anywhere. |
+| `npm run migrate:verify-existing-users` | **Run once when deploying email verification.** Marks every account created before the feature as verified (`--dry-run` to preview). |
+| `npm run reevaluate-badges` | Awards badges users already qualify for (e.g. First Session for past sessions). `--dry-run` previews, `--notify` also sends "badge earned" notifications. Safe to re-run. |
+| `npm run diagnose:sessions -- you@example.com` | Read-only: lists a user's sessions and which Sessions tab each appears in. |
+
+### Becoming an admin
+
+1. Register the account in the app and verify its email.
+2. `cd backend && npm run make-admin -- that@email.com` (add `--no-srv` if needed).
+3. Log out and back in. An **Admin** link appears in the navbar and opens `/admin`.
+
+Admins cannot deactivate or demote themselves, and the last active admin can never be demoted or deactivated. Every admin action is written to the audit log.
+
 ---
 
 ## Project Structure
@@ -116,9 +169,10 @@ SkillSwap_MERN/
 │   ├── middleware/      # Auth, validation, upload, error handling
 │   ├── models/          # Mongoose schemas
 │   ├── routes/          # API routes
-│   ├── services/        # AI, notification, reputation logic
+│   ├── scripts/         # One-off maintenance scripts (make-admin, migrations)
+│   ├── services/        # AI, notification, reputation, email, admin logic
 │   ├── socket/          # Socket.io event handling
-│   └── utils/           # Helper functions
+│   └── utils/           # Helpers, email templates, token utilities
 └── frontend/
     └── src/
         ├── api/          # Axios instance
@@ -136,10 +190,8 @@ SkillSwap_MERN/
 
 This project was built as an academic FYP, and some production-scale features are intentionally out of scope for now:
 
-- No TURN server configured for WebRTC (works reliably on most networks, but may fail behind strict NATs/firewalls)
-- No admin panel
-- No password reset flow
-- Notifications use REST polling rather than real-time Socket.io push
+- WebRTC uses the free public Open Relay TURN service — no uptime/bandwidth guarantee; a dedicated TURN server is the next step for scale
+- Session recordings are saved on the recording user's device, not uploaded
 - Hosted on free-tier infrastructure, so cold starts are expected after inactivity
 
 ---
