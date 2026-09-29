@@ -1,71 +1,89 @@
-import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { LayoutDashboard, Users, Flag, CalendarDays, ScrollText, Settings, X } from 'lucide-react'
 import AdminTopBar from './AdminTopBar'
 
 const ADMIN_LINKS = [
-    { to: '/admin',            label: 'Dashboard', icon: '📊', end: true },
-    { to: '/admin/users',      label: 'Users',     icon: '👥' },
-    { to: '/admin/reports',    label: 'User Reports', icon: '🚩' },
-    { to: '/admin/sessions',   label: 'Sessions',  icon: '📅' },
-    { to: '/admin/audit-logs', label: 'Audit Log', icon: '📜' },
-    { to: '/admin/settings',   label: 'Settings',  icon: '⚙️' },
+    { to: '/admin',            label: 'Dashboard',    Icon: LayoutDashboard, end: true },
+    { to: '/admin/users',      label: 'Users',        Icon: Users },
+    { to: '/admin/reports',    label: 'User Reports', Icon: Flag },
+    { to: '/admin/sessions',   label: 'Sessions',     Icon: CalendarDays },
+    { to: '/admin/audit-logs', label: 'Audit Log',    Icon: ScrollText },
 ]
 
+const SETTINGS_LINK = { to: '/admin/settings', label: 'Settings', Icon: Settings }
+
+const SideLink = function({ link, onNavigate }) {
+    const { to, label, Icon, end } = link
+    return (
+        <NavLink to={to} end={end} onClick={onNavigate}
+            className={function({ isActive }) { return 'admin-nav-link' + (isActive ? ' admin-nav-link--active' : '') }}>
+            <Icon size={18} strokeWidth={2} aria-hidden="true" />
+            <span>{label}</span>
+        </NavLink>
+    )
+}
+
 /**
- * Admin-only shell: its own top bar (no member Navbar) and a sidebar that
- * collapses into a menu button on mobile.
+ * Admin-only shell: a dark sidebar (off-canvas drawer below 1024px), an
+ * admin top bar, and the page header. No member Navbar.
  */
 const AdminLayout = function({ title, subtitle, actions, children }) {
-    const [menuOpen, setMenuOpen] = useState(false)
+    const [drawerOpen, setDrawerOpen] = useState(false)
     const location = useLocation()
-    const current  = ADMIN_LINKS.find(function(l) { return l.end ? location.pathname === l.to : location.pathname.startsWith(l.to) })
+    const close = function() { setDrawerOpen(false) }
+
+    // Escape closes the mobile drawer; the page behind it doesn't scroll.
+    useEffect(function() {
+        if (!drawerOpen) return
+        const onKey = function(e) { if (e.key === 'Escape') setDrawerOpen(false) }
+        document.addEventListener('keydown', onKey)
+        document.body.style.overflow = 'hidden'
+        return function() {
+            document.removeEventListener('keydown', onKey)
+            document.body.style.overflow = ''
+        }
+    }, [drawerOpen])
 
     return (
         <div className="admin-root">
-        <AdminTopBar />
-        <div className="admin-shell">
-            <aside className="admin-sidebar" aria-label="Admin navigation">
-                <div className="admin-sidebar-head">
-                    <span className="admin-sidebar-title">Admin Panel</span>
-                    <button
-                        type="button"
-                        className="admin-menu-toggle"
-                        aria-expanded={menuOpen}
-                        aria-controls="admin-nav"
-                        onClick={function() { setMenuOpen(function(o) { return !o }) }}
-                    >
-                        {(current ? current.icon + ' ' + current.label : 'Menu') + (menuOpen ? ' ▲' : ' ▼')}
+            <aside id="admin-sidebar" className={'admin-sidebar' + (drawerOpen ? ' admin-sidebar--open' : '')} aria-label="Admin navigation">
+                <div className="admin-sidebar-brand">
+                    <Link to="/admin" onClick={close} className="admin-brand">
+                        <span className="admin-brand-mark" aria-hidden="true">S</span>
+                        <span className="admin-brand-text">SkillSwap</span>
+                        <span className="admin-brand-tag">Admin</span>
+                    </Link>
+                    <button type="button" className="admin-drawer-close" onClick={close} aria-label="Close menu">
+                        <X size={20} aria-hidden="true" />
                     </button>
                 </div>
-                <nav id="admin-nav" className={'admin-nav' + (menuOpen ? ' admin-nav--open' : '')}>
-                    {ADMIN_LINKS.map(function(link) {
-                        return (
-                            <NavLink
-                                key={link.to}
-                                to={link.to}
-                                end={link.end}
-                                onClick={function() { setMenuOpen(false) }}
-                                className={function({ isActive }) { return 'admin-nav-link' + (isActive ? ' admin-nav-link--active' : '') }}
-                            >
-                                <span aria-hidden="true">{link.icon}</span>
-                                <span>{link.label}</span>
-                            </NavLink>
-                        )
-                    })}
+
+                <nav className="admin-nav">
+                    <p className="admin-nav-section">Overview</p>
+                    {ADMIN_LINKS.map(function(link) { return <SideLink key={link.to} link={link} onNavigate={close} /> })}
+                    <p className="admin-nav-section">Account</p>
+                    <SideLink link={SETTINGS_LINK} onNavigate={close} />
                 </nav>
+
+                <p className="admin-sidebar-foot">SkillSwap Admin · {new Date().getFullYear()}</p>
             </aside>
 
-            <main className="admin-main">
-                <div className="admin-page-head">
-                    <div style={{ minWidth: 0 }}>
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>{title}</h1>
-                        {subtitle && <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9375rem' }}>{subtitle}</p>}
+            {drawerOpen && <div className="admin-backdrop" onClick={close} aria-hidden="true" />}
+
+            <div className="admin-body">
+                <AdminTopBar onMenuClick={function() { setDrawerOpen(true) }} menuOpen={drawerOpen} pathname={location.pathname} />
+                <main className="admin-main">
+                    <div className="admin-page-head">
+                        <div style={{ minWidth: 0 }}>
+                            <h1 className="admin-page-title">{title}</h1>
+                            {subtitle && <p className="admin-page-subtitle">{subtitle}</p>}
+                        </div>
+                        {actions}
                     </div>
-                    {actions}
-                </div>
-                {children}
-            </main>
-        </div>
+                    {children}
+                </main>
+            </div>
         </div>
     )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/axios'
 import AdminLayout from '../../components/layout/AdminLayout'
+import { Users, UserPlus, CalendarDays, AlertTriangle, Star, ShieldCheck } from 'lucide-react'
 import StatCard from '../../components/ui/StatCard'
 import Spinner from '../../components/ui/Spinner'
 
@@ -61,14 +62,14 @@ const AdminDashboardPage = function() {
             {stats && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     <div className="admin-stat-grid">
-                        <StatCard icon="👥" label="Total users" value={stats.users.total} sub={stats.users.active + ' active · ' + stats.users.inactive + ' deactivated'} />
-                        <StatCard icon="🆕" label="New users (7 days)" value={stats.users.new7d} sub={stats.users.new30d + ' in the last 30 days'} color="success" />
-                        <StatCard icon="📅" label="Sessions" value={stats.sessions.total} sub={stats.sessions.byStatus.completed + ' completed'} color="neutral" />
-                        <StatCard icon="🚩" label="Pending reports" value={stats.reports.byStatus.pending} sub={stats.reports.total + ' reports in total'} color={stats.reports.byStatus.pending > 0 ? 'error' : 'neutral'} />
-                        <StatCard icon="⭐" label="Average rating" value={stats.ratings.total ? stats.ratings.average.toFixed(1) : '—'} sub={stats.ratings.total + ' ratings'} color="warning" />
-                        <StatCard icon="🛡️" label="Admins" value={stats.users.admins} color="primary" />
+                        <StatCard icon={Users} label="Total users" value={stats.users.total} sub={stats.users.active + ' active · ' + stats.users.inactive + ' deactivated'} />
+                        <StatCard icon={UserPlus} label="New users (7 days)" value={stats.users.new7d} sub={stats.users.new30d + ' in the last 30 days'} color="success" />
+                        <StatCard icon={CalendarDays} label="Sessions" value={stats.sessions.total} sub={stats.sessions.byStatus.completed + ' completed'} color="violet" />
+                        <StatCard icon={AlertTriangle} label="Pending reports" value={stats.reports.byStatus.pending} sub={stats.reports.total + ' reports in total'} color={stats.reports.byStatus.pending > 0 ? 'error' : 'neutral'} />
+                        <StatCard icon={Star} label="Average rating" value={stats.ratings.total ? stats.ratings.average.toFixed(1) : '—'} sub={stats.ratings.total + ' ratings'} color="warning" />
+                        <StatCard icon={ShieldCheck} label="Admins" value={stats.users.admins} color="neutral" />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
                         <Breakdown title="Sessions by status" counts={stats.sessions.byStatus} labels={SESSION_LABELS} color="#2563eb" link="/admin/sessions" />
                         <Breakdown title="Reports by status" counts={stats.reports.byStatus} labels={REPORT_LABELS} color="#dc2626" link="/admin/reports" />
                     </div>

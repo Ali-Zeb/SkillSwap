@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import api from '../../api/axios'
 import { logoutUser, selectCurrentUser } from '../../features/auth/authSlice'
+import { Bell, ChevronDown, LogOut, Menu, UserCog } from 'lucide-react'
 import { getAvatarUrl, timeAgo } from '../../utils/helpers'
 
 // Closes a dropdown when the user clicks outside it or presses Escape.
@@ -80,7 +81,7 @@ const NotificationBell = function() {
     return (
         <div ref={ref} style={{ position: 'relative' }}>
             <button type="button" onClick={toggle} style={iconButton} aria-label={'Notifications' + (unread ? ', ' + unread + ' unread' : '')} aria-expanded={open}>
-                <span aria-hidden="true">🔔</span>
+                <Bell size={18} aria-hidden="true" />
                 {unread > 0 && (
                     <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#dc2626', color: 'white', fontSize: '0.6875rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
                         {unread > 99 ? '99+' : unread}
@@ -133,7 +134,7 @@ const AccountMenu = function() {
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.5rem 0.25rem 0.25rem', borderRadius: 999, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', maxWidth: 220 }}>
                 <img src={getAvatarUrl(user?.avatar, user?.fullName)} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 <span className="admin-topbar-name" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName}</span>
-                <span aria-hidden="true" style={{ color: '#94a3b8', fontSize: '0.75rem' }}>▾</span>
+                <ChevronDown size={16} color="#94a3b8" aria-hidden="true" />
             </button>
             {open && (
                 <div role="menu" style={{ ...dropdown, width: 220, padding: '0.375rem' }}>
@@ -142,12 +143,12 @@ const AccountMenu = function() {
                         <div style={{ fontSize: '0.75rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
                     </div>
                     <Link role="menuitem" to="/admin/settings" onClick={function() { setOpen(false) }}
-                        style={{ display: 'block', padding: '0.5rem 0.625rem', borderRadius: 8, color: '#1e293b', textDecoration: 'none', fontSize: '0.875rem' }}>
-                        ⚙️ Account settings
+                        className="admin-menu-item">
+                        <UserCog size={16} aria-hidden="true" /> Account settings
                     </Link>
                     <button role="menuitem" type="button" onClick={logout}
-                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.625rem', borderRadius: 8, border: 'none', background: 'none', color: '#dc2626', fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ↪ Log out
+                        className="admin-menu-item admin-menu-item--danger">
+                        <LogOut size={16} aria-hidden="true" /> Log out
                     </button>
                 </div>
             )}
@@ -155,17 +156,30 @@ const AccountMenu = function() {
     )
 }
 
+const SECTION_NAMES = [
+    ['/admin/users', 'Users'], ['/admin/reports', 'User Reports'], ['/admin/sessions', 'Sessions'],
+    ['/admin/audit-logs', 'Audit Log'], ['/admin/settings', 'Settings'], ['/admin', 'Dashboard'],
+]
+
 /**
- * Admin-only top bar: logo + "Admin" label, notifications, account menu.
- * Replaces the member Navbar inside /admin.
+ * Admin-only top bar: menu button (mobile), current section, notifications
+ * and account menu. Replaces the member Navbar inside /admin; the brand
+ * lives in the sidebar.
  */
-const AdminTopBar = function() {
+const AdminTopBar = function({ onMenuClick, menuOpen, pathname }) {
+    const section = (SECTION_NAMES.find(function([p]) { return pathname.startsWith(p) }) || [])[1] || 'Admin'
     return (
         <header className="admin-topbar">
-            <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', minWidth: 0 }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 800, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>SkillSwap</span>
-                <span style={{ padding: '0.125rem 0.5rem', borderRadius: 6, background: '#1e293b', color: 'white', fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Admin</span>
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <button type="button" className="admin-hamburger" onClick={onMenuClick} aria-label="Open menu" aria-controls="admin-sidebar" aria-expanded={menuOpen}>
+                    <Menu size={20} aria-hidden="true" />
+                </button>
+                <div className="admin-topbar-crumb">
+                    <span className="admin-topbar-crumb-root">Admin</span>
+                    <span aria-hidden="true" style={{ color: '#cbd5e1' }}>/</span>
+                    <span className="admin-topbar-crumb-current">{section}</span>
+                </div>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <NotificationBell />
                 <AccountMenu />
