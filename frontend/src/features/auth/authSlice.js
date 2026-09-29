@@ -153,5 +153,7 @@ export const selectIsAuthenticated = (state) => state.auth.isAuthenticated
 export const selectAuthLoading     = (state) => state.auth.isLoading
 export const selectAuthError       = (state) => state.auth.error
 export const selectToken           = (state) => state.auth.token
+// UI-only gate; every /api/admin route is enforced server-side from the DB role.
+export const selectIsAdmin         = (state) => state.auth.user?.role === 'admin'
 
 export default authSlice.reducer

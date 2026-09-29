@@ -1,6 +1,8 @@
 const jwt     = require('jsonwebtoken')
-const Message = require('../models/Message')
-const User    = require('../models/User')
+const mongoose = require('mongoose')
+const Message  = require('../models/Message')
+const Session  = require('../models/Session')
+const User     = require('../models/User')
 
 /**
  * Verifies the JWT sent during the socket handshake.
@@ -42,7 +44,16 @@ function registerSocketHandlers(io) {
                 socket.emit('message-error', { message: 'receiverId and content are required' })
                 return
             }
+            if (!mongoose.Types.ObjectId.isValid(receiverId) || String(receiverId) === socket.userId) {
+                socket.emit('message-error', { message: 'Invalid recipient' })
+                return
+            }
             try {
+                const receiver = await User.exists({ _id: receiverId, isActive: true })
+                if (!receiver) {
+                    socket.emit('message-error', { message: 'This user is not available' })
+                    return
+                }
                 const saved = await Message.create({
                     senderId:   socket.userId,
                     receiverId,
@@ -66,8 +77,19 @@ function registerSocketHandlers(io) {
         })
 
         // ── WebRTC Session Room ───────────────────────────────────────────────
-        socket.on('join-session', ({ sessionId }) => {
-            if (!sessionId) return
+        socket.on('join-session', async ({ sessionId } = {}) => {
+            if (!sessionId || !mongoose.Types.ObjectId.isValid(sessionId)) return
+            // Only the session's teacher or learner may join its signaling room.
+            try {
+                const session = await Session.findById(sessionId).select('teacherId learnerId')
+                if (!session || !session.isParticipant(socket.userId)) {
+                    socket.emit('session-error', { message: 'You are not a participant of this session' })
+                    return
+                }
+            } catch (error) {
+                console.error('join-session lookup failed:', error.message)
+                return
+            }
             const roomName = `session_${sessionId}`
             socket.join(roomName)
             socket.sessionId = sessionId

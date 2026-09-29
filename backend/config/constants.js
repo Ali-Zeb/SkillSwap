@@ -92,6 +92,15 @@ const REPORT_STATUS = {
 
 const REPORT_TARGET_TYPES = ['user', 'session', 'message'];
 
+const USER_ROLES = ['user', 'admin'];
+
+const AUDIT_ACTIONS = {
+    USER_DEACTIVATED: 'user_deactivated',
+    USER_ACTIVATED:   'user_activated',
+    ROLE_CHANGED:     'role_changed',
+    REPORT_UPDATED:   'report_updated'
+};
+
 const NOTIFICATION_TYPES = {
     REQUEST_RECEIVED:  'request_received',
     REQUEST_ACCEPTED:  'request_accepted',
@@ -198,5 +207,7 @@ module.exports = {
     REPORT_REASONS,
     REPORT_REASON_LABELS,
     REPORT_STATUS,
-    REPORT_TARGET_TYPES
+    REPORT_TARGET_TYPES,
+    USER_ROLES,
+    AUDIT_ACTIONS
 };

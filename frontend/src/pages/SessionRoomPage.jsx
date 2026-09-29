@@ -269,6 +269,9 @@ const SessionRoomPage = function () {
                 return [...prev, msg]
             })
         })
+        socket.on('session-error', function ({ message }) {
+            setError(message || 'You cannot join this session.')
+        })
         socket.on('session-participants', function ({ participants }) {
             if (participants.length >= 2) setCallStatus('connecting')
         })

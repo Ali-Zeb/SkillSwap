@@ -134,6 +134,21 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    /**
+     * Set by an admin when deactivating (suspending) the account; shown to
+     * the user on login. Cleared on reactivation. Existing users default
+     * to empty/null, so no migration is needed.
+     */
+    deactivationReason: {
+        type:      String,
+        trim:      true,
+        maxlength: 500,
+        default:   ''
+    },
+    deactivatedAt: {
+        type:    Date,
+        default: null
+    },
     lastActive: {
         type: Date,
         default: Date.now

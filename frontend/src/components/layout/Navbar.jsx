@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
     selectCurrentUser,
     selectIsAuthenticated,
+    selectIsAdmin,
     logoutUser,
 } from '../../features/auth/authSlice'
 import Spinner from '../ui/Spinner'
@@ -22,6 +23,8 @@ const Navbar = function() {
     const location        = useLocation()
     const user            = useSelector(selectCurrentUser)
     const isAuthenticated = useSelector(selectIsAuthenticated)
+    const isAdmin         = useSelector(selectIsAdmin)
+    const navLinks        = isAdmin ? [...NAV_LINKS, { path: '/admin', label: 'Admin' }] : NAV_LINKS
     const [mobileOpen,    setMobileOpen]    = useState(false)
     const [dropdownOpen,  setDropdownOpen]  = useState(false)
     const [loggingOut,    setLoggingOut]    = useState(false)
@@ -91,7 +94,7 @@ const Navbar = function() {
                 {/* Desktop nav */}
                 {!isMobile ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {NAV_LINKS.map(function(link) {
+                        {navLinks.map(function(link) {
                             const active = isActive(link.path)
                             return (
                                 <Link
@@ -236,7 +239,7 @@ const Navbar = function() {
             {isMobile && mobileOpen ? (
                 <div className="navbar-mobile-drawer" style={{ position: 'absolute', top: '100%', left: 0, right: 0, borderTop: '1px solid #f1f5f9', background: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
                     <div style={{ padding: '0.75rem 1.25rem' }}>
-                        {NAV_LINKS.map(function(link) {
+                        {navLinks.map(function(link) {
                             const active = isActive(link.path)
                             return (
                                 <Link

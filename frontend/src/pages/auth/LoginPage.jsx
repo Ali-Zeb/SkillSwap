@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
     loginUser,
@@ -23,6 +23,8 @@ const LoginPage = function() {
     const isLoading       = useSelector(selectAuthLoading)
     const error           = useSelector(selectAuthError)
     const isAuthenticated = useSelector(selectIsAuthenticated)
+    const [searchParams]  = useSearchParams()
+    const wasDeactivated  = searchParams.get('deactivated') === '1'
 
     const [email,    setEmail]    = useState('')
     const [password, setPassword] = useState('')
@@ -123,9 +125,11 @@ const LoginPage = function() {
                             <h1 style={{ fontSize: '1.625rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.375rem' }}>Login to Account</h1>
                             <p style={{ color: '#64748b', fontSize: '0.9375rem', marginBottom: '1.75rem' }}>Please enter your credentials to continue</p>
 
-                            {error ? (
-                                <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: '1.25rem' }}>
-                                    <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>{error}</p>
+                            {error || wasDeactivated ? (
+                                <div role="alert" style={{ padding: '0.75rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: '1.25rem' }}>
+                                    <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                                        {error || 'Your account has been deactivated, so you were signed out. Contact support if you think this is a mistake.'}
+                                    </p>
                                 </div>
                             ) : null}
 

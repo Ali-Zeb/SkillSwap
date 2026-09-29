@@ -41,18 +41,23 @@ const loginUser = asyncHandler(async (req, res) => {
         });
     }
 
-    if (!user.isActive) {
-        return res.status(401).json({
-            success: false,
-            message: 'This account has been deactivated'
-        });
-    }
-
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
         return res.status(401).json({
             success: false,
             message: 'Invalid email or password'
+        });
+    }
+
+    // Checked after the password so account status isn't revealed to
+    // someone who doesn't know the password.
+    if (!user.isActive) {
+        return res.status(403).json({
+            success: false,
+            code:    'ACCOUNT_DEACTIVATED',
+            message: user.deactivationReason
+                ? `Your account has been deactivated. Reason: ${user.deactivationReason}`
+                : 'Your account has been deactivated. Please contact support.'
         });
     }
 
