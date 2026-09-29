@@ -144,7 +144,8 @@ Run from `backend/`. Each reads `MONGO_URI` from `backend/.env`. If connecting t
 
 | Command | What it does |
 |---|---|
-| `npm run make-admin -- you@example.com` | Promotes an **existing, registered** account to admin. No admin credentials are hardcoded anywhere. |
+| `npm run make-admin -- you@example.com` | Promotes an **existing, registered** account to admin and marks its email verified (so the admin can always log in). No admin credentials are hardcoded anywhere. |
+| `npm run email:test -- you@example.com` | Sends a test email with the configured provider and prints the exact error if it fails (never prints the API key). |
 | `npm run migrate:verify-existing-users` | **Run once when deploying email verification.** Marks every account created before the feature as verified (`--dry-run` to preview). |
 | `npm run reevaluate-badges` | Awards badges users already qualify for (e.g. First Session for past sessions). `--dry-run` previews, `--notify` also sends "badge earned" notifications. Safe to re-run. |
 | `npm run diagnose:sessions -- you@example.com` | Read-only: lists a user's sessions and which Sessions tab each appears in. |

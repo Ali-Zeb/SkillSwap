@@ -36,9 +36,13 @@ const sendViaBrevo = async ({ to, subject, html, text }) => {
             timeout: 10000
         });
     } catch (error) {
-        // Never log the request (it carries the API key) — only Brevo's reason.
+        // Never log the request (it carries the API key) — only Brevo's
+        // status, error code and reason, which name the actual problem
+        // (e.g. unrecognised IP address, invalid sender, bad key).
+        const status = error.response?.status;
+        const code   = error.response?.data?.code;
         const reason = error.response?.data?.message || error.message;
-        throw new Error(`Brevo send failed: ${reason}`);
+        throw new Error(`Brevo send failed${status ? ` (HTTP ${status}${code ? `, ${code}` : ''})` : ''}: ${reason}`);
     }
 };
 

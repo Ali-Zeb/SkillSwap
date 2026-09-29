@@ -40,19 +40,27 @@ const main = async () => {
     await mongoose.connect(uri, { autoIndex: false, autoCreate: false });
     const users = mongoose.connection.db.collection('users');
 
-    const user = await users.findOne({ email }, { projection: { fullName: 1, role: 1, isActive: 1 } });
+    const user = await users.findOne({ email }, { projection: { fullName: 1, role: 1, isActive: 1, isEmailVerified: 1 } });
     if (!user) {
         console.error('No account found with that email. Register it in the app first.');
         process.exitCode = 1;
         return;
     }
-    if (user.role === 'admin') {
+
+    // Whoever runs this script controls the database, so the admin account
+    // is trusted: mark its email verified so it can always log in, even
+    // while email delivery is misconfigured.
+    const needsVerification = user.isEmailVerified === false;
+    if (user.role === 'admin' && !needsVerification) {
         console.log(`${user.fullName} is already an admin. Nothing changed.`);
         return;
     }
 
-    await users.updateOne({ _id: user._id }, { $set: { role: 'admin' } });
-    console.log(`✅ ${user.fullName} is now an admin. Log in again (or refresh) to see the Admin link.`);
+    await users.updateOne(
+        { _id: user._id },
+        { $set: { role: 'admin', isEmailVerified: true }, $unset: { emailVerificationToken: '', emailVerificationExpires: '' } }
+    );
+    console.log(`✅ ${user.fullName} is now an admin${needsVerification ? ' and their email is marked as verified' : ''}. Log in again (or refresh) to see the Admin link.`);
     if (user.isActive === false) {
         console.log('⚠️  Note: this account is deactivated, so it cannot log in until it is reactivated.');
     }
