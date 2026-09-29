@@ -32,6 +32,7 @@ const badgeRoutes        = require('./routes/badges');
 
 // Connect to MongoDB
 connectDB();
+require('./services/emailService').checkEmailConfig();
 
 const app    = express();
 const server = http.createServer(app);

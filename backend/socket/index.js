@@ -13,8 +13,11 @@ const authenticateSocket = async (socket, next) => {
         const token = socket.handshake.auth?.token
         if (!token) return next(new Error('Authentication required'))
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        const user    = await User.findById(decoded.id).select('_id isActive fullName')
+        const user    = await User.findById(decoded.id).select('_id isActive fullName passwordChangedAt')
         if (!user || !user.isActive) return next(new Error('Invalid or inactive account'))
+        if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+            return next(new Error('Session expired, please log in again'))
+        }
         socket.userId   = user._id.toString()
         socket.fullName = user.fullName
         next()

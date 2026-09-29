@@ -40,4 +40,16 @@ const reportLimiter = rateLimit({
     legacyHeaders:   false,
 })
 
-module.exports = { generalLimiter, authLimiter, reportLimiter }
+/**
+ * Emails sent on request (resend verification, forgot password):
+ * 5 per IP per 15 minutes, to stop inbox flooding and enumeration probing.
+ */
+const emailLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max:      5,
+    message:  { success: false, message: 'Too many email requests. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders:   false,
+})
+
+module.exports = { generalLimiter, authLimiter, reportLimiter, emailLimiter }

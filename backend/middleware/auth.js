@@ -39,6 +39,15 @@ const protect = async (req, res, next) => {
             });
         }
 
+        // A password reset revokes every JWT issued before it.
+        if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+            return res.status(401).json({
+                success: false,
+                code:    'TOKEN_REVOKED',
+                message: 'Your password was changed. Please log in again.'
+            });
+        }
+
         req.user = user;
 
         // Fire-and-forget activity timestamp update.

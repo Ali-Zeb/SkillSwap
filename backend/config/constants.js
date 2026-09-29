@@ -94,6 +94,38 @@ const REPORT_TARGET_TYPES = ['user', 'session', 'message'];
 
 const USER_ROLES = ['user', 'admin'];
 
+const AUTH_TOKEN_TTL = {
+    EMAIL_VERIFICATION_MS: 24 * 60 * 60 * 1000,   // 24 hours
+    PASSWORD_RESET_MS:     15 * 60 * 1000         // 15 minutes
+};
+
+// Common throwaway-inbox providers blocked at registration. Extend as
+// new ones show up in sign-ups; matching includes subdomains.
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+    '10minutemail.com', '10minutemail.net', '20minutemail.com', 'anonaddy.me', 'burnermail.io',
+    'dispostable.com', 'dropmail.me', 'emailondeck.com', 'fakeinbox.com', 'fakemail.net',
+    'getairmail.com', 'getnada.com', 'guerrillamail.biz', 'guerrillamail.com', 'guerrillamail.de',
+    'guerrillamail.net', 'guerrillamail.org', 'guerrillamailblock.com', 'harakirimail.com', 'inboxbear.com',
+    'incognitomail.org', 'jetable.org', 'mail.tm', 'mailcatch.com', 'maildrop.cc',
+    'mailinator.com', 'mailinator.net', 'mailnesia.com', 'mailpoof.com', 'mintemail.com',
+    'mohmal.com', 'moakt.com', 'mytemp.email', 'nada.email', 'sharklasers.com',
+    'spam4.me', 'spamgourmet.com', 'temp-mail.io', 'temp-mail.org', 'tempail.com',
+    'tempmail.com', 'tempmail.net', 'tempmail.plus', 'tempmailo.com', 'tempr.email',
+    'throwawaymail.com', 'trashmail.com', 'trashmail.de', 'yopmail.com', 'yopmail.fr',
+    'yopmail.net', 'emailfake.com', 'mailforspam.com', 'grr.la', 'spambox.us'
+]);
+
+const isDisposableEmail = (email) => {
+    const domain = String(email).split('@')[1]?.toLowerCase().trim();
+    if (!domain) return false;
+    const parts = domain.split('.');
+    // Check the domain and each parent (sub.mailinator.com → mailinator.com).
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (DISPOSABLE_EMAIL_DOMAINS.has(parts.slice(i).join('.'))) return true;
+    }
+    return false;
+};
+
 const AUDIT_ACTIONS = {
     USER_DEACTIVATED: 'user_deactivated',
     USER_ACTIVATED:   'user_activated',
@@ -209,5 +241,7 @@ module.exports = {
     REPORT_STATUS,
     REPORT_TARGET_TYPES,
     USER_ROLES,
-    AUDIT_ACTIONS
+    AUDIT_ACTIONS,
+    AUTH_TOKEN_TTL,
+    isDisposableEmail
 };

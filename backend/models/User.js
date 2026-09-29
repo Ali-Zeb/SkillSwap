@@ -149,6 +149,28 @@ const UserSchema = new mongoose.Schema({
         type:    Date,
         default: null
     },
+    /**
+     * Email verification. Deliberately has NO schema default: Mongoose
+     * applies defaults when loading old documents, which would mark every
+     * existing user unverified and lock them out. registerUser sets it to
+     * false explicitly; only an explicit `false` blocks login, and
+     * scripts/markUsersVerified.js backfills `true` for existing users.
+     */
+    isEmailVerified: {
+        type: Boolean
+    },
+    emailVerificationToken:   { type: String, select: false },   // SHA-256 hash
+    emailVerificationExpires: { type: Date,   select: false },
+    passwordResetToken:       { type: String, select: false },   // SHA-256 hash
+    passwordResetExpires:     { type: Date,   select: false },
+    /**
+     * Set when the password is reset; `protect` rejects JWTs issued before
+     * it, which signs the user out everywhere.
+     */
+    passwordChangedAt: {
+        type:    Date,
+        default: null
+    },
     lastActive: {
         type: Date,
         default: Date.now
@@ -179,6 +201,11 @@ UserSchema.methods.toJSON = function () {
     const obj = this.toObject();
     delete obj.password;
     delete obj.__v;
+    delete obj.emailVerificationToken;
+    delete obj.emailVerificationExpires;
+    delete obj.passwordResetToken;
+    delete obj.passwordResetExpires;
+    delete obj.passwordChangedAt;
     return obj;
 };
 

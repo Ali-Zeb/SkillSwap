@@ -7,6 +7,10 @@ import Layout               from './components/layout/Layout'
 import LandingPage          from './pages/LandingPage'
 import LoginPage            from './pages/auth/LoginPage'
 import RegisterPage         from './pages/auth/RegisterPage'
+import CheckEmailPage       from './pages/auth/CheckEmailPage'
+import VerifyEmailPage      from './pages/auth/VerifyEmailPage'
+import ForgotPasswordPage   from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage    from './pages/auth/ResetPasswordPage'
 import DashboardPage        from './pages/DashboardPage'
 import ProfilePage          from './pages/ProfilePage'
 import EditProfilePage      from './pages/EditProfilePage'
@@ -87,6 +91,11 @@ const App = function() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+            <Route path="/check-email"            element={<PublicRoute><CheckEmailPage /></PublicRoute>} />
+            <Route path="/forgot-password"        element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+            {/* Token links work whether or not someone is signed in on this browser. */}
+            <Route path="/verify-email/:token"    element={<VerifyEmailPage />} />
+            <Route path="/reset-password/:token"  element={<ResetPasswordPage />} />
 
             <Route path="/dashboard"        element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/profile/edit"     element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />

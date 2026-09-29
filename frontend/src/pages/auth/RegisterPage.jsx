@@ -62,7 +62,11 @@ const RegisterPage = function() {
         setErrors({})
         const result = await dispatch(registerUser({ fullName: normalizeName(fullName), email, password }))
         if (registerUser.fulfilled.match(result)) {
-            navigate('/dashboard', { replace: true })
+            if (result.payload.requiresVerification) {
+                navigate('/check-email', { replace: true, state: { email: result.payload.email, emailSent: result.payload.emailSent } })
+            } else {
+                navigate('/dashboard', { replace: true })
+            }
         }
     }
 
