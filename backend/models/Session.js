@@ -95,16 +95,12 @@ SessionSchema.index({ learnerId: 1, date: 1 });
  * every approve/decline/cancel/complete endpoint to return 403 Forbidden.
  */
 SessionSchema.methods.isParticipant = function (userId) {
-    const teacherIdStr = this.teacherId?._id
-        ? this.teacherId._id.toString()
-        : this.teacherId.toString();
+    // A populated ref is null when that user was deleted — treat it as
+    // "no participant" rather than throwing on .toString().
+    const idOf = (ref) => (ref ? (ref._id || ref).toString() : null);
 
-    const learnerIdStr = this.learnerId?._id
-        ? this.learnerId._id.toString()
-        : this.learnerId.toString();
-
-    return teacherIdStr === userId.toString() ||
-           learnerIdStr === userId.toString();
+    return idOf(this.teacherId) === userId.toString() ||
+           idOf(this.learnerId) === userId.toString();
 };
 
 module.exports = mongoose.model('Session', SessionSchema);
