@@ -1,6 +1,10 @@
-const express = require('express');
-const cors    = require('cors');
-const dotenv  = require('dotenv');
+const express       = require('express');
+const cors          = require('cors');
+const dotenv        = require('dotenv');
+const helmet        = require('helmet');
+const compression   = require('compression');
+const morgan        = require('morgan');
+const mongoSanitize = require('express-mongo-sanitize');
 const http    = require('http');
 const path    = require('path');
 const { Server } = require('socket.io');
@@ -53,13 +57,27 @@ const io = new Server(server, {
 // This avoids circular imports — controllers never import server.js.
 app.set('io', io);
 
+// Security headers. crossOriginResourcePolicy is disabled so the frontend
+// (a different origin) can still load legacy /uploads images.
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
 // Core middleware
 app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true
 }));
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Strip $-prefixed and dotted keys from body/query/params to block
+// MongoDB operator injection (e.g. { "email": { "$gt": "" } }).
+app.use(mongoSanitize());
+
+if (process.env.NODE_ENV !== 'production') {
+    app.use(morgan('dev'));
+}
+
 app.use(generalLimiter);
 
 // Serve uploaded avatars — absolute path so it works from any working directory
