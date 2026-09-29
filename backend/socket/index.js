@@ -168,6 +168,17 @@ function registerSocketHandlers(io) {
             })
         })
 
+        // Lets the other participant know they are being recorded. Only
+        // relayed from a socket that actually joined that session's room.
+        socket.on('recording-state', ({ sessionId, recording } = {}) => {
+            if (!sessionId || socket.sessionId !== sessionId) return
+            socket.to(`session_${sessionId}`).emit('peer-recording', {
+                userId:    socket.userId,
+                fullName:  socket.fullName,
+                recording: !!recording,
+            })
+        })
+
         socket.on('leave-session', ({ sessionId }) => {
             if (!sessionId) return
             _leaveSession(socket, io, sessionId, sessionRooms)

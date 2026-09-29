@@ -7,6 +7,7 @@ import api from '../api/axios'
 import Spinner from '../components/ui/Spinner'
 import MessageAttachment from '../components/ui/MessageAttachment'
 import ReportModal from '../components/ui/ReportModal'
+import { createSessionRecorder, isRecordingSupported, recordingFileName } from '../utils/sessionRecorder'
 import { getAvatarUrl } from '../utils/helpers'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
@@ -65,6 +66,7 @@ const SessionRoomPage = function () {
     const [callStatus,    setCallStatus]    = useState('waiting')
     const [recording,     setRecording]     = useState(false)
     const [reportOpen,    setReportOpen]    = useState(false)
+    const [peerRecording, setPeerRecording] = useState(false)
     const [recordingTime, setRecordingTime] = useState(0)
     const [messages,      setMessages]      = useState([])
     const [newMessage,    setNewMessage]    = useState('')
@@ -82,6 +84,7 @@ const SessionRoomPage = function () {
     const timerRef         = useRef(null)
     const recordTimerRef   = useRef(null)
     const mediaRecRef      = useRef(null)
+    const recStateRef      = useRef({})
     const fileInputRef     = useRef(null)
     const partnerUserIdRef = useRef(null)
     const remoteStreamRef  = useRef(null)
@@ -313,8 +316,10 @@ const SessionRoomPage = function () {
         socket.on('peer-audio-toggled',  function ({ muted })    { setPeerMuted(muted) })
         socket.on('peer-video-toggled',  function ({ videoOff }) { setPeerVideoOff(videoOff) })
         socket.on('peer-screen-share',   function ({ sharing })  { setPeerSharing(sharing) })
+        socket.on('peer-recording',      function ({ recording }) { setPeerRecording(recording) })
         socket.on('peer-left', function () {
             setPeerConnected(false)
+            setPeerRecording(false)
             setCallStatus('waiting')
             remoteStreamRef.current = null
             if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
@@ -391,42 +396,86 @@ const SessionRoomPage = function () {
         }
     }, [sharing, id])
 
-    const startRecording = useCallback(function () {
-        if (typeof MediaRecorder === 'undefined') {
-            setError('Recording is not supported on this browser. Please use Chrome or Firefox.')
+    /* Recording composes the whole class (screen share, both cameras, both
+       voices) on a canvas — see utils/sessionRecorder.js. It only reads the
+       existing streams; the peer connection is never touched. */
+    const stopRecording = useCallback(function () {
+        if (!mediaRecRef.current) return
+        mediaRecRef.current.stop()   // downloads the file, then releases canvas/audio
+        mediaRecRef.current = null
+        clearInterval(recordTimerRef.current)
+        setRecording(false)
+        setRecordingTime(0)
+        socketRef.current?.emit('recording-state', { sessionId: id, recording: false })
+    }, [id])
+
+    const startRecording = useCallback(async function () {
+        if (mediaRecRef.current) return
+        if (!isRecordingSupported()) {
+            setError('Recording is not supported on this browser. Please use a recent Chrome, Edge or Firefox.')
             return
         }
-        if (!localStreamRef.current) { setError('No media stream available to record.'); return }
-        const tracks = []
-        localStreamRef.current.getTracks().forEach(function (t) { tracks.push(t) })
-        const rs       = new MediaStream(tracks)
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm'
-        const rec      = new MediaRecorder(rs, { mimeType })
-        mediaRecRef.current = rec
-        const chunks = []
-        rec.ondataavailable = function (e) { if (e.data.size > 0) chunks.push(e.data) }
-        rec.onstop = function () {
-            const blob = new Blob(chunks, { type: mimeType })
-            const url  = URL.createObjectURL(blob)
-            const a    = document.createElement('a')
-            a.href     = url
-            a.download = 'SkillSwap-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.webm'
-            a.click()
-            URL.revokeObjectURL(url)
+        let rec
+        try {
+            rec = createSessionRecorder({
+                fileName: recordingFileName(recStateRef.current.title),
+                getSources: function () {
+                    const st = recStateRef.current
+                    return {
+                        localStream:     localStreamRef.current,
+                        remoteStream:    remoteStreamRef.current,
+                        screenStream:    screenStreamRef.current,
+                        localVideoOff:   st.videoOff,
+                        remoteVideoOff:  st.peerVideoOff,
+                        remoteSharing:   st.peerSharing,
+                        remoteConnected: st.peerConnected,
+                        localName:       st.localName,
+                        remoteName:      st.remoteName,
+                    }
+                },
+                onError: function (err) {
+                    console.error('Recording error:', err)
+                    setError('Recording stopped unexpectedly. The part recorded so far has been saved.')
+                    stopRecording()
+                },
+            })
+            mediaRecRef.current = rec
+            // Resolves false if the user stopped/left during the short warm-up.
+            if (!(await rec.start())) return
+        } catch (err) {
+            console.error('Could not start recording:', err)
+            if (mediaRecRef.current === rec) mediaRecRef.current = null
+            rec?.stop()
+            setError('Could not start recording on this device.')
+            return
         }
-        rec.start(1000)
+        if (mediaRecRef.current !== rec) return
         setRecording(true)
         setRecordingTime(0)
         recordTimerRef.current = setInterval(function () {
             setRecordingTime(function (p) { return p + 1 })
         }, 1000)
-    }, [])
+        socketRef.current?.emit('recording-state', { sessionId: id, recording: true })
+    }, [id, stopRecording])
 
-    const stopRecording = useCallback(function () {
-        if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') mediaRecRef.current.stop()
-        clearInterval(recordTimerRef.current)
-        setRecording(false)
-        setRecordingTime(0)
+    // Keep the latest UI state readable from the recorder's draw loop.
+    useEffect(function () {
+        const iAmTeacher = session?.teacherId?._id === currentUser?._id
+        const other      = iAmTeacher ? session?.learnerId : session?.teacherId
+        recStateRef.current = {
+            videoOff, peerVideoOff, peerSharing, peerConnected,
+            title:      session?.title,
+            localName:  (currentUser?.fullName || 'You') + ' (you)',
+            remoteName: other?.fullName || 'Partner',
+        }
+    }, [videoOff, peerVideoOff, peerSharing, peerConnected, session, currentUser])
+
+    // Leaving the page mid-recording still saves what was recorded.
+    useEffect(function () {
+        return function () {
+            if (mediaRecRef.current) mediaRecRef.current.stop()
+            clearInterval(recordTimerRef.current)
+        }
     }, [])
 
     const sendMessage = useCallback(function () {
@@ -689,6 +738,12 @@ const SessionRoomPage = function () {
                         <div className="sr-rec-badge" aria-label={'Recording: ' + formatRecTime(recordingTime)}>
                             <span className="sr-rec-dot" />
                             <span>REC {formatRecTime(recordingTime)}</span>
+                        </div>
+                    )}
+                    {peerRecording && !recording && (
+                        <div className="sr-rec-badge" role="status" aria-live="polite" title={(partner?.fullName || 'Your partner') + ' is recording this session'}>
+                            <span className="sr-rec-dot" />
+                            <span>{(partner?.fullName?.split(' ')[0] || 'Partner') + ' is recording'}</span>
                         </div>
                     )}
                     {partner?._id && (
